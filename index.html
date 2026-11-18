@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Rekapitulasi Alat K3 - Perum LPPNPI Cabang Tarakan</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+  <!-- ==================== PRINT ONLY HEADER ==================== -->
+  <div class="print-only-header">
+    <div style="font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">PERUM LPPNPI</div>
+    <div style="font-size: 12pt; font-weight: 700; color: #333;" id="print-unit-title">CABANG TARAKAN</div>
+    <div style="font-size: 10pt; color: #555; margin-bottom: 8px;">Wilayah Kerja Perum LPPNPI Cabang Tarakan -
+      Kalimantan Utara</div>
+    <div
+      style="font-size: 13pt; font-weight: 800; border-top: 2px solid #000; border-bottom: 1px solid #000; padding: 6px 0; margin-top: 8px;">
+      LAPORAN REKAPITULASI INVENTARIS ALAT K3 (KESELAMATAN & KESEHATAN KERJA)
+    </div>
+    <div style="font-size: 9.5pt; margin-top: 5px; color: #444;" id="print-date-display">Tarakan, -</div>
+  </div>
+
+  <!-- ==================== APP HEADER ==================== -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <div class="brand-logo-badge">
+          <!-- Aviation Safety Shield SVG -->
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>
+            PERUM LPPNPI
+            <span class="badge-branch" id="header-badge-branch">CABANG TARAKAN</span>
+          </h1>
+          <p>Sistem Rekapitulasi Inventaris Alat K3 (Keselamatan & Kesehatan Kerja)</p>
+        </div>
+      </div>
+
+      <!-- UNIT SELECTOR (MULTI-OFFICE SWITCHER) -->
+      <div class="unit-selector-wrapper no-print">
+        <label for="select-active-unit" class="unit-selector-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          Kantor / Unit:
+        </label>
+        <select id="select-active-unit" class="unit-dropdown" onchange="handleUnitChange(this.value)">
+          <option value="TRK" selected>🏢 Perum LPPNPI Cabang Tarakan (Utama)</option>
+          <option value="MLN">📍 Perum LPPNPI Cabang Pembantu Malinau</option>
+          <option value="NNX">📍 Perum LPPNPI Unit Nunukan</option>
+          <option value="TJS">📍 Perum LPPNPI Unit Tanjung Harapan</option>
+          <option value="LBW">📍 Perum LPPNPI Unit Long Bawan</option>
+          <option value="LPU">📍 Perum LPPNPI Unit Long Apung</option>
+          <option value="ALL">🌐 Semua Unit (Konsolidasi)</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== NAVIGATION TABS ==================== -->
+  <nav class="nav-tabs-wrapper">
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-rekap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+          </path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        Rekap Stok Alat K3
+        <span class="tab-badge" id="badge-tab-items">6</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-masuk">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+        Barang Masuk
+      </button>
+
+      <button class="tab-btn" data-tab="tab-keluar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        Barang Keluar
+      </button>
+
+      <button class="tab-btn" data-tab="tab-mutasi">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        Riwayat Mutasi
+        <span class="tab-badge" id="badge-tab-tx">0</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-laporan">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Laporan &amp; Cetak
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MAIN BODY ==================== -->
+  <main class="main-container">
+
+    <!-- KPI STATS OVERVIEW (Always visible on top) -->
+    <div class="stats-grid no-print">
+      <div class="stat-card">
+        <div class="stat-icon primary">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h4>Jenis Alat K3</h4>
+          <div class="stat-value" id="stat-total-jenis">6</div>
+          <div class="stat-subtext" id="stat-kritis-badge">Semua Stok Aman</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h4>Sisa Unit Tersedia</h4>
+          <div class="stat-value" id="stat-total-sisa" style="color: var(--success);">18 Unit</div>
+          <div class="stat-subtext">Total unit fisik di Lemari K3</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h4>Total Barang Masuk</h4>
+          <div class="stat-value" id="stat-total-masuk" style="color: #0284c7;">0 Unit</div>
+          <div class="stat-subtext">Penambahan dari pengadaan</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon danger">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+            <polyline points="17 18 23 18 23 12"></polyline>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <h4>Total Barang Keluar</h4>
+          <div class="stat-value" id="stat-total-keluar" style="color: var(--danger);">0 Unit</div>
+          <div class="stat-subtext">Distribusi ke petugas lapangan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: REKAP STOK ==================== -->
+    <div id="tab-rekap" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="rekap-card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <line x1="8" y1="13" x2="16" y2="13"></line>
+                <line x1="8" y1="17" x2="16" y2="17"></line>
+              </svg>
+              Daftar Rekapitulasi Stok Alat K3 - Perum LPPNPI Cabang Tarakan
+            </h2>
+            <div class="card-subtitle" id="rekap-card-subtitle">Menampilkan stok awal, barang masuk, barang keluar, dan
+              sisa unit terkini secara real-time.</div>
+          </div>
+
+          <div class="toolbar-wrapper">
+            <div class="search-box">
+              <span class="search-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input type="text" id="search-master" placeholder="Cari nama atau kode alat...">
+            </div>
+
+            <select id="filter-status-master" class="select-filter">
+              <option value="ALL">Semua Status Stok</option>
+              <option value="AMAN">Stok Aman</option>
+              <option value="MENIPIS">Stok Menipis / Kritis</option>
+              <option value="HABIS">Stok Habis</option>
+            </select>
+
+            <button class="btn btn-outline" onclick="exportStockToCSV()" title="Unduh format Excel/CSV">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Ekspor CSV
+            </button>
+
+            <button class="btn btn-primary" onclick="openModal('modal-add-item')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Tambah Alat Baru
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">No</th>
+                <th style="width: 95px;">Kode</th>
+                <th>Nama Alat K3</th>
+                <th style="text-align: center; width: 80px;">Satuan</th>
+                <th style="text-align: center; width: 100px;">Stok Awal</th>
+                <th style="text-align: center; width: 105px;">Barang Masuk</th>
+                <th style="text-align: center; width: 105px;">Barang Keluar</th>
+                <th style="text-align: center; width: 110px;">Sisa Unit</th>
+                <th style="text-align: center; width: 110px;">Status</th>
+                <th style="text-align: center; width: 80px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="master-table-body">
+              <!-- Populated dynamically by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: BARANG MASUK ==================== -->
+    <div id="tab-masuk" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" style="color: var(--success);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="8 12 12 16 16 12"></polyline>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+              </svg>
+              Form Pencatatan Barang Masuk (Penerimaan / Restock)
+            </h2>
+            <div class="card-subtitle">Gunakan form ini untuk mencatat penerimaan alat K3 baru dari pengadaan atau
+              vendor.</div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <form id="form-barang-masuk">
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label class="form-label">Pilih Alat K3 <span class="required">*</span></label>
+                <select id="masuk-barang-id" class="form-control" required>
+                  <!-- Populated dynamically -->
+                </select>
+                <div class="input-help">Jika alat belum pernah terdata sebelumnya, pilih opsi paling atas <strong>[➕
+                    ALAT BARU...]</strong></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Jumlah Masuk <span class="required">*</span></label>
+                <input type="number" id="masuk-jumlah" class="form-control" min="1" placeholder="Contoh: 5" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tanggal &amp; Waktu Penerimaan <span class="required">*</span></label>
+                <input type="datetime-local" id="masuk-tanggal" class="form-control" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Pengirim / Vendor / Asal Barang</label>
+                <input type="text" id="masuk-pengirim" class="form-control"
+                  placeholder="Contoh: Logistik Kantor Pusat / PT. Safety Mandiri">
+              </div>
+
+              <!-- INLINE NEW ITEM REGISTRATION (Triggered if user chooses '__NEW__') -->
+              <div id="section-new-barang-inline" class="form-group full-width"
+                style="display: none; background: #f0fdf4; border: 1px dashed #86efac; padding: 1.25rem; border-radius: var(--radius-sm);">
+                <div
+                  style="font-weight: 700; color: #166534; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                  Pendaftaran Alat K3 Baru (Otomatis Masuk Master Data &amp; Langsung Tersimpan)
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Kantor / Unit Kerja <span class="required">*</span></label>
+                    <select id="inline-new-unit" class="form-control">
+                      <option value="TRK">🏢 Perum LPPNPI Cabang Tarakan (Utama)</option>
+                      <option value="MLN">📍 Perum LPPNPI Cabang Pembantu Malinau</option>
+                      <option value="NNX">📍 Perum LPPNPI Unit Nunukan</option>
+                      <option value="TJS">📍 Perum LPPNPI Unit Tanjung Harapan</option>
+                      <option value="LBW">📍 Perum LPPNPI Unit Long Bawan</option>
+                      <option value="LPU">📍 Perum LPPNPI Unit Long Apung</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Nama Alat K3 Baru <span class="required">*</span></label>
+                    <input type="text" id="inline-new-nama" class="form-control"
+                      placeholder="Contoh: HARNESS FULL BODY">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Satuan <span class="required">*</span></label>
+                    <input type="text" id="inline-new-satuan" class="form-control" value="PCS"
+                      placeholder="PCS / SET / UNIT">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <input type="text" id="inline-new-kategori" class="form-control" value="APD Ketinggian"
+                      placeholder="Contoh: APD Ketinggian / Alat Damkar">
+                  </div>
+                </div>
+              </div>
+
+              <!-- STOCK NOTICE PREVIEW -->
+              <div id="masuk-stock-notice" class="form-group full-width stock-notice-box" style="display: none;">
+                <!-- Populated dynamically on select -->
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Catatan / Keterangan Tambahan</label>
+                <textarea id="masuk-keterangan" class="form-control"
+                  placeholder="Contoh: Pengadaan triwulan 1 Perum LPPNPI Cabang Tarakan, kondisi baru dan segel..."></textarea>
+              </div>
+
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+              <button type="submit" class="btn btn-success" style="padding: 0.75rem 1.75rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Simpan Barang Masuk
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RECENT INCOMING LOG -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">5 Penerimaan Barang Masuk Terakhir</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">No</th>
+                <th>Tanggal</th>
+                <th>Nama Alat K3</th>
+                <th>Jumlah Masuk</th>
+                <th>Pengirim / Vendor</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="tx-masuk-recent-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: BARANG KELUAR ==================== -->
+    <div id="tab-keluar" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" style="color: var(--danger);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="16 12 12 8 8 12"></polyline>
+                <line x1="12" y1="16" x2="12" y2="8"></line>
+              </svg>
+              Form Pencatatan Barang Keluar (Distribusi / Penggunaan Lapangan)
+            </h2>
+            <div class="card-subtitle">Catat peminjaman atau distribusi alat K3 kepada personil atau unit kerja bandara.
+              Dilengkapi validasi stok agar tidak minus.</div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <form id="form-barang-keluar">
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label class="form-label">Pilih Alat K3 yang Dikeluarkan <span class="required">*</span></label>
+                <select id="keluar-barang-id" class="form-control" required>
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Jumlah Keluar <span class="required">*</span></label>
+                <input type="number" id="keluar-jumlah" class="form-control" min="1" placeholder="Contoh: 1" required>
+                <div class="input-help">Sistem akan menolak otomatis jika jumlah melebihi sisa unit yang ada.</div>
+              </div>
+
+              <!-- STOCK NOTICE PREVIEW -->
+              <div id="keluar-stock-notice" class="form-group full-width stock-notice-box" style="display: none;">
+                <!-- Populated dynamically on select -->
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tanggal &amp; Waktu Pengeluaran <span class="required">*</span></label>
+                <input type="datetime-local" id="keluar-tanggal" class="form-control" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Nama Penerima / Petugas Lapangan <span class="required">*</span></label>
+                <input type="text" id="keluar-penerima" class="form-control"
+                  placeholder="Contoh: Ahmad Fauzi / Unit CNS Tarakan" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Keperluan / Lokasi Kerja</label>
+                <input type="text" id="keluar-keperluan" class="form-control"
+                  placeholder="Contoh: Perawatan Tower ATC / Instalasi Antena Radar">
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Catatan Tambahan</label>
+                <textarea id="keluar-keterangan" class="form-control"
+                  placeholder="Contoh: Kondisi baik, dipinjam selama perbaikan instalasi kabel..."></textarea>
+              </div>
+
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+              <button type="submit" class="btn btn-danger" style="padding: 0.75rem 1.75rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Simpan Pengeluaran Barang
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RECENT OUTGOING LOG -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">5 Pengeluaran Barang Terakhir</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">No</th>
+                <th>Tanggal</th>
+                <th>Nama Alat K3</th>
+                <th>Jumlah Keluar</th>
+                <th>Penerima (Keperluan)</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="tx-keluar-recent-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: RIWAYAT MUTASI ==================== -->
+    <div id="tab-mutasi" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Riwayat Lengkap Mutasi Transaksi K3
+            </h2>
+            <div class="card-subtitle">Semua arus log barang masuk dan keluar tercatat dengan audit trail lengkap.</div>
+          </div>
+
+          <div class="toolbar-wrapper">
+            <div class="search-box">
+              <span class="search-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input type="text" id="search-tx" placeholder="Cari petugas, alat, keperluan...">
+            </div>
+
+            <select id="filter-tx-jenis" class="select-filter">
+              <option value="ALL">Semua Jenis Transaksi</option>
+              <option value="MASUK">Hanya Barang Masuk</option>
+              <option value="KELUAR">Hanya Barang Keluar</option>
+            </select>
+
+            <select id="filter-tx-barang" class="select-filter">
+              <option value="ALL">Semua Alat K3</option>
+              <!-- Populated dynamically -->
+            </select>
+
+            <button class="btn btn-outline" onclick="exportTransactionsToCSV()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Ekspor CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">No</th>
+                <th style="width: 130px;">Waktu Transaksi</th>
+                <th style="text-align: center; width: 95px;">Jenis</th>
+                <th>Nama Alat K3</th>
+                <th style="text-align: center; width: 110px;">Jumlah</th>
+                <th>Petugas / Unit</th>
+                <th>Catatan / Keterangan</th>
+                <th style="text-align: center; width: 65px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tx-all-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 5: LAPORAN & CETAK ==================== -->
+    <div id="tab-laporan" class="tab-pane">
+      <div class="card">
+        <div class="card-header no-print">
+          <div>
+            <h2 class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9V2h12v7"></path>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+              Pratinjau Laporan Resmi K3 &amp; Manajemen Data
+            </h2>
+            <div class="card-subtitle" id="report-card-subtitle">Format siap cetak resmi untuk pelaporan manajemen Perum
+              LPPNPI Cabang Tarakan.</div>
+          </div>
+
+          <div class="toolbar-wrapper">
+            <button class="btn btn-primary" onclick="window.print()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+              Cetak Laporan / PDF
+            </button>
+            <button class="btn btn-outline" onclick="backupData()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Cadangkan (Backup JSON)
+            </button>
+            <label class="btn btn-outline" style="cursor: pointer; margin: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Pulihkan (Restore)
+              <input type="file" id="file-restore" style="display: none;" accept=".json" onchange="restoreData(event)">
+            </label>
+            <button class="btn btn-outline" style="color: var(--danger); border-color: #fca5a5;"
+              onclick="resetToDefault()">
+              Reset ke Awal
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div
+            style="margin-bottom: 1.5rem; text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem;">
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">REKAPITULASI INVENTARIS ALAT
+              KESELAMATAN &amp; KESEHATAN KERJA (K3)</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;" id="report-unit-subtitle">PERUM LPPNPI CABANG
+              TARAKAN</p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">No</th>
+                  <th style="width: 80px; text-align: center;">Kode</th>
+                  <th>Nama Alat K3</th>
+                  <th style="text-align: center; width: 70px;">Satuan</th>
+                  <th style="text-align: center; width: 90px;">Stok Awal</th>
+                  <th style="text-align: center; width: 90px;">Masuk (+)</th>
+                  <th style="text-align: center; width: 90px;">Keluar (-)</th>
+                  <th style="text-align: center; width: 90px;">Sisa Unit</th>
+                  <th style="text-align: center; width: 90px;">Status</th>
+                  <th>Keberadaan / Lokasi</th>
+                </tr>
+              </thead>
+              <tbody id="report-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- SIGNATURE BLOCK (Visible on Print and in Report tab) -->
+          <div class="print-signature-area"
+            style="display: flex; justify-content: space-between; margin-top: 3.5rem; padding: 0 2rem;">
+            <div style="text-align: center; width: 230px;">
+              <p style="font-size: 0.9rem;">Dibuat Oleh,</p>
+              <p style="font-weight: 600; font-size: 0.9rem;" id="sign-petugas-title">Petugas Pengelola K3</p>
+              <div style="height: 70px;"></div>
+              <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
+                ................................................. )</div>
+              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" id="sign-petugas-unit">Perum LPPNPI Cabang
+                Tarakan</div>
+            </div>
+
+            <div style="text-align: center; width: 250px;">
+              <p style="font-size: 0.9rem;">Mengetahui,</p>
+              <p style="font-weight: 600; font-size: 0.9rem;">Manager Safety</p>
+              <div style="height: 70px;"></div>
+              <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
+                .................................................. )</div>
+              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" id="sign-manager-unit">Perum LPPNPI Cabang
+                Tarakan</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== MODAL: TAMBAH ALAT K3 BARU ==================== -->
+  <div id="modal-add-item" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Tambah Alat K3 Baru
+        </h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-add-item')">&times;</button>
+      </div>
+      <form id="form-new-item-modal">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Kantor / Unit Kerja <span class="required">*</span></label>
+            <select id="modal-new-unit" class="form-control" required onchange="handleModalUnitChange(this.value)">
+              <option value="TRK">🏢 Perum LPPNPI Cabang Tarakan (Utama)</option>
+              <option value="MLN">📍 Perum LPPNPI Cabang Pembantu Malinau</option>
+              <option value="NNX">📍 Perum LPPNPI Unit Nunukan</option>
+              <option value="TJS">📍 Perum LPPNPI Unit Tanjung Harapan</option>
+              <option value="LBW">📍 Perum LPPNPI Unit Long Bawan</option>
+              <option value="LPU">📍 Perum LPPNPI Unit Long Apung</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Alat K3 <span class="required">*</span></label>
+            <input type="text" id="modal-new-nama" class="form-control"
+              placeholder="Contoh: EAR MUFF / BODY HARNESS / APAR" required>
+            <div class="input-help">Nama alat akan otomatis dikonversi ke huruf kapital dan tersimpan permanen.</div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Satuan <span class="required">*</span></label>
+              <input type="text" id="modal-new-satuan" class="form-control" value="PCS" placeholder="PCS / SET / UNIT"
+                required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok Awal</label>
+              <input type="number" id="modal-new-stokawal" class="form-control" min="0" value="0">
+              <div class="input-help">Jika barang baru masuk, isi jumlahnya di sini atau catat melalui tab Barang Masuk.
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Batas Peringatan Stok Menipis</label>
+              <input type="number" id="modal-new-minstok" class="form-control" min="1" value="2">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <input type="text" id="modal-new-kategori" class="form-control" value="Alat Pelindung Diri (APD)"
+                placeholder="APD / Tanggap Darurat / Damkar">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lokasi Penyimpanan / Keberadaan</label>
+            <input type="text" id="modal-new-lokasi" class="form-control" value="Lemari K3"
+              placeholder="Contoh: Lemari K3">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Keterangan / Spesifikasi</label>
+            <textarea id="modal-new-keterangan" class="form-control"
+              placeholder="Spesifikasi merek, standar keamanan, atau catatan lainnya..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add-item')">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan ke Sistem</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ==================== TOAST NOTIFICATIONS ==================== -->
+  <div id="toast-container" class="toast-container no-print"></div>
+
+  <!-- Scripts -->
+  <script src="assets/js/app.js"></script>
+</body>
+
+</html>

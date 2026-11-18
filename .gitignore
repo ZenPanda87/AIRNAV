@@ -1,0 +1,41 @@
+# =========================================================================
+# AirNav Indonesia (Perum LPPNPI) - Sistem Rekapitulasi Inventaris Alat K3
+# =========================================================================
+
+# Folder Bahan & Dokumen Referensi / Dokumen Mentah
+bahan/
+
+# Dokumen & Spreadsheet Bahan Acuan
+*.xlsx
+*.xls
+*.xlsm
+*.pdf
+~$*.xlsx
+~$*.xls
+
+# File Ekspor Cadangan Data
+*.csv
+Backup_K3_*.json
+
+# File Log & Temporary
+*.log
+*.tmp
+*.bak
+
+# Sistem Operasi & Direktori Cache
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Konfigurasi Editor / IDE
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS Code (Abaikan selain launch.json)
+.vscode/*
+!.vscode/launch.json
