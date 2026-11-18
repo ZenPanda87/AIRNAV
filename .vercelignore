@@ -1,0 +1,17 @@
+# File yang tidak ikut dipublikasikan ke Vercel
+bahan/
+*.xlsx
+*.xls
+*.pdf
+*.csv
+*.bat
+*.ps1
+*.md
+.vscode/
+supabase/
+Backup_K3_*.json
+*.txt
+.env
+.env.*
+.git/
+

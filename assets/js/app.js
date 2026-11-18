@@ -14,13 +14,12 @@ const UNITS = [
   { id: "LPU", name: "Perum LPPNPI Unit Long Apung", shortName: "Long Apung", type: "Unit", badge: "UNIT LONG APUNG", prefix: "LPU", city: "Long Apung" }
 ];
 
-// Key Storage
-const STORAGE_KEY_ITEMS = 'airnav_k3_items_v1';
-const STORAGE_KEY_TX = 'airnav_k3_transactions_v1';
+// Key Storage (data alat & transaksi dikelola oleh db.js)
 const STORAGE_KEY_ACTIVE_UNIT = 'airnav_k3_active_unit_v1';
 
 // Active Unit State (Defaults to 'TRK' or restored from storage)
 let activeUnitId = localStorage.getItem(STORAGE_KEY_ACTIVE_UNIT) || 'TRK';
+if (activeUnitId !== 'ALL' && !UNITS.some(u => u.id === activeUnitId)) activeUnitId = 'TRK';
 
 // Initial Data requested by User (Default untuk Perum LPPNPI Cabang Tarakan)
 const INITIAL_ITEMS = [
@@ -62,7 +61,13 @@ function getUnitCity(unitId) {
 function handleUnitChange(newUnitId) {
   activeUnitId = newUnitId;
   localStorage.setItem(STORAGE_KEY_ACTIVE_UNIT, newUnitId);
+  syncUnitUI(newUnitId);
+  renderAll();
+  showToast(`Beralih ke: ${getUnitName(newUnitId)}`, 'info');
+}
 
+// Sinkronkan elemen UI yang bergantung pada unit aktif
+function syncUnitUI(newUnitId) {
   // Sync dropdown in header
   const sel = document.getElementById('select-active-unit');
   if (sel && sel.value !== newUnitId) sel.value = newUnitId;
@@ -104,9 +109,6 @@ function handleUnitChange(newUnitId) {
   if (inlineUnit) {
     inlineUnit.value = (newUnitId !== 'ALL') ? newUnitId : 'TRK';
   }
-
-  renderAll();
-  showToast(`Beralih ke: ${getUnitName(newUnitId)}`, 'info');
 }
 
 function handleModalUnitChange(unitVal) {
@@ -116,78 +118,201 @@ function handleModalUnitChange(unitVal) {
   }
 }
 
+// Beri atribut data-label pada setiap sel agar tabel tampil sebagai kartu di layar HP
+function labelTableCells(table) {
+  const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    Array.from(tr.children).forEach((td, idx) => {
+      if (!td.hasAttribute('colspan') && headers[idx] !== undefined) td.setAttribute('data-label', headers[idx]);
+    });
+  });
+}
+
+function setupResponsiveTables() {
+  document.querySelectorAll('table.table-cards').forEach(table => {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    labelTableCells(table);
+    new MutationObserver(() => labelTableCells(table)).observe(tbody, { childList: true });
+  });
+}
+
 // Initialize
-function initApp() {
-  loadData();
+async function initApp() {
+  setupResponsiveTables();
   setupEventListeners();
+  setTodayDateInputs();
+  setLoading(true);
+
+  try {
+    await DB.init(async (event) => {
+      applyAuthUI();
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') await refreshData();
+    });
+  } catch (e) {
+    console.error(e);
+  }
+  applyAuthUI();
 
   // Apply stored active unit to UI
-  const sel = document.getElementById('select-active-unit');
-  if (sel) sel.value = activeUnitId;
-  const badge = document.getElementById('header-badge-branch');
-  if (badge) {
-    if (activeUnitId === 'ALL') {
-      badge.textContent = 'SELURUH UNIT KERJA';
-    } else {
-      badge.textContent = getUnit(activeUnitId).badge;
-    }
-  }
+  syncUnitUI(activeUnitId);
 
-  renderAll();
-  populateDropdowns();
-  setTodayDateInputs();
+  await refreshData();
+  setLoading(false);
+
+  // Muat ulang data saat tab peramban kembali aktif (sinkron dengan admin lain)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && DB.mode === 'cloud') refreshData(true);
+  });
 }
 
-// Load data from LocalStorage or initialize with defaults
-function loadData() {
-  const storedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
-  const storedTx = localStorage.getItem(STORAGE_KEY_TX);
+// Muat ulang seluruh data dari sumber (Supabase / localStorage)
+async function refreshData(silent = false) {
+  try {
+    const data = await DB.loadAll(INITIAL_ITEMS);
+    items = data.items;
+    transactions = data.transactions;
+    renderAll();
+    updateConnectionBadge(true);
+  } catch (e) {
+    console.error(e);
+    updateConnectionBadge(false);
+    if (!silent) showToast('Gagal memuat data: ' + e.message, 'danger');
+  }
+}
 
-  if (storedItems) {
-    try {
-      items = JSON.parse(storedItems);
-      // Migrasi: pastikan setiap item memiliki unitId dan keterangan lokasi diseragamkan ke "Lemari K3"
-      items.forEach(it => {
-        if (!it.unitId) it.unitId = 'TRK';
-        it.lokasi = 'Lemari K3';
-      });
-      saveItems();
-    } catch (e) {
-      console.error("Error parsing items from localStorage", e);
-      items = JSON.parse(JSON.stringify(INITIAL_ITEMS));
-    }
+// Jalankan operasi tulis: cek hak akses, kunci tombol, tangani error, muat ulang data
+async function runWrite(action, button) {
+  if (!DB.canWrite) {
+    showToast('Silakan login sebagai admin untuk mengubah data.', 'warning');
+    openModal('modal-login');
+    return false;
+  }
+  const original = button ? button.innerHTML : null;
+  if (button) { button.disabled = true; button.innerHTML = 'Menyimpan...'; }
+  try {
+    await action();
+    await refreshData();
+    return true;
+  } catch (e) {
+    console.error(e);
+    showToast(e.message || 'Terjadi kesalahan.', 'danger');
+    return false;
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = original; }
+  }
+}
+
+function setLoading(on) {
+  document.body.classList.toggle('is-loading', on);
+}
+
+function updateConnectionBadge(ok) {
+  const el = document.getElementById('conn-status');
+  if (!el) return;
+  if (DB.mode === 'local') {
+    el.textContent = 'Mode Lokal (Offline)';
+    el.className = 'conn-status local';
+    el.title = 'Data tersimpan di peramban ini saja. Isi assets/js/config.js untuk memakai Supabase.';
   } else {
-    items = JSON.parse(JSON.stringify(INITIAL_ITEMS));
-    saveItems();
+    el.textContent = ok ? 'Tersinkron Cloud' : 'Gagal Terhubung';
+    el.className = 'conn-status ' + (ok ? 'online' : 'offline');
+    el.title = ok ? 'Data tersimpan di Supabase' : 'Periksa koneksi internet';
   }
+}
 
-  if (storedTx) {
-    try {
-      transactions = JSON.parse(storedTx);
-      transactions.forEach(t => {
-        if (!t.unitId) {
-          const matchedItem = items.find(i => i.id === t.barangId);
-          t.unitId = matchedItem ? (matchedItem.unitId || 'TRK') : 'TRK';
-        }
-      });
-      saveTransactions();
-    } catch (e) {
-      console.error("Error parsing transactions from localStorage", e);
-      transactions = [];
-    }
+function newId(prefix) {
+  const rand = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${Date.now()}-${rand}`;
+}
+
+// =================== AUTENTIKASI ADMIN ===================
+function applyAuthUI() {
+  const canWrite = DB.canWrite;
+  document.body.classList.toggle('read-only', !canWrite);
+
+  const btnLogin = document.getElementById('btn-login');
+  const userBox = document.getElementById('admin-user-box');
+  const userEmail = document.getElementById('admin-user-email');
+
+  if (DB.mode === 'local') {
+    if (btnLogin) btnLogin.style.display = 'none';
+    if (userBox) userBox.style.display = 'none';
+  } else if (DB.isAdmin && DB.user) {
+    if (btnLogin) btnLogin.style.display = 'none';
+    if (userBox) userBox.style.display = 'flex';
+    if (userEmail) userEmail.textContent = DB.user.email;
   } else {
-    transactions = [];
-    saveTransactions();
+    if (btnLogin) btnLogin.style.display = 'inline-flex';
+    if (userBox) userBox.style.display = 'none';
+  }
+
+  // Jika tab aktif khusus admin dan user bukan admin, kembali ke tab rekap
+  const activePane = document.querySelector('.tab-pane.active');
+  if (!canWrite && activePane && (activePane.id === 'tab-masuk' || activePane.id === 'tab-keluar')) {
+    switchTab('tab-rekap');
+  }
+
+  // Tawarkan unggah data dari versi offline lama
+  const legacyBanner = document.getElementById('legacy-banner');
+  if (legacyBanner) {
+    const legacy = DB.getLegacyLocalData();
+    legacyBanner.style.display = (DB.isAdmin && legacy) ? 'flex' : 'none';
+    const cnt = document.getElementById('legacy-count');
+    if (cnt && legacy) cnt.textContent = `${legacy.items.length} alat & ${legacy.transactions.length} transaksi`;
   }
 }
 
-// Save state to LocalStorage
-function saveItems() {
-  localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(items));
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login-submit');
+  errBox.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+  try {
+    await DB.signIn(email, password);
+    closeModal('modal-login');
+    document.getElementById('form-login').reset();
+    applyAuthUI();
+    await refreshData();
+    showToast('Login admin berhasil. Selamat bekerja!', 'success');
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
 }
 
-function saveTransactions() {
-  localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
+async function handleLogout() {
+  if (!confirm('Keluar dari akun admin?')) return;
+  await DB.signOut();
+  applyAuthUI();
+  showToast('Anda telah logout. Mode lihat saja aktif.', 'info');
+}
+
+async function uploadLegacyData(btn) {
+  const legacy = DB.getLegacyLocalData();
+  if (!legacy) return;
+  if (!confirm(`Unggah ${legacy.items.length} alat dan ${legacy.transactions.length} transaksi dari peramban ini ke database cloud?\n\nData dengan kode yang sama di cloud tidak akan diduplikasi.`)) return;
+  const ok = await runWrite(() => DB.importAll(legacy.items, legacy.transactions, false), btn);
+  if (ok) {
+    DB.clearLegacyLocalData();
+    applyAuthUI();
+    showToast('Data lokal berhasil diunggah ke cloud!', 'success');
+  }
+}
+
+function dismissLegacyData() {
+  if (!confirm('Hapus data lama dari peramban ini tanpa mengunggah? Pastikan sudah dibackup bila perlu.')) return;
+  DB.clearLegacyLocalData();
+  applyAuthUI();
 }
 
 // Compute live stock summary (filtered by unit or ALL)
@@ -208,7 +333,7 @@ function getEnrichedItems(unitFilter = activeUnitId) {
     
     const stokAwal = Number(item.stokAwal || 0);
     const sisa = stokAwal + masuk - keluar;
-    const minStok = Number(item.minStok || 2);
+    const minStok = Number(item.minStok ?? 2);
 
     let status = 'AMAN';
     if (sisa <= 0) {
@@ -257,11 +382,11 @@ function setTodayDateInputs() {
 
 // Render All Components
 function renderAll() {
+  populateDropdowns(); // lebih dulu agar filter transaksi valid untuk unit aktif
   renderStats();
   renderMasterTable();
   renderTransactionTables();
   renderReportTable();
-  populateDropdowns();
 }
 
 // Render Dashboard KPI Cards
@@ -342,7 +467,7 @@ function renderMasterTable() {
             <h3>${isFiltered ? 'Tidak Ada Alat K3 yang Sesuai' : `Belum Ada Data Alat K3 di ${escapeHtml(unitName)}`}</h3>
             <p>${isFiltered ? 'Silakan sesuaikan kata kunci pencarian atau filter status.' : `Inventaris alat K3 untuk <strong>${escapeHtml(unitName)}</strong> belum pernah diinput.<br>Silakan klik tombol di bawah untuk mulai menambahkan alat K3 unit ini.`}</p>
             ${!isFiltered ? `
-              <button class="btn btn-primary" onclick="openModal('modal-add-item')" style="margin-top: 1rem;">
+              <button class="btn btn-primary admin-only" onclick="openModal('modal-add-item')" style="margin-top: 1rem;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 + Tambah Alat Baru (${escapeHtml(getUnitShortName(activeUnitId))})
               </button>
@@ -390,8 +515,12 @@ function renderMasterTable() {
           <span class="stock-pill ${stockClass}">${item.sisa}</span>
         </td>
         <td style="text-align: center;">${statusBadge}</td>
-        <td style="text-align: center; white-space: nowrap;">
-          <button class="btn btn-sm btn-outline" style="color: var(--danger); border-color: #fca5a5;" onclick="confirmDeleteItem('${item.id}')" title="Hapus Alat">
+        <td class="admin-only" style="text-align: center; white-space: nowrap;">
+          <button class="btn btn-sm btn-outline" onclick="openEditItem('${escapeHtml(item.id)}')" title="Ubah Alat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            Ubah
+          </button>
+          <button class="btn btn-sm btn-outline" style="color: var(--danger); border-color: #fca5a5;" onclick="confirmDeleteItem('${escapeHtml(item.id)}')" title="Hapus Alat">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             Hapus
           </button>
@@ -427,6 +556,15 @@ function populateDropdowns() {
     ).join('');
   }
 
+  // Simpan pilihan saat ini agar tidak hilang ketika data dimuat ulang
+  const prevMasuk = selectMasuk ? selectMasuk.value : '';
+  const prevKeluar = selectKeluar ? selectKeluar.value : '';
+  const prevFilter = filterTxBarang ? filterTxBarang.value : 'ALL';
+  const restore = (sel, val, fallback) => {
+    if (!sel) return;
+    sel.value = Array.from(sel.options).some(o => o.value === val) ? val : fallback;
+  };
+
   if (selectMasuk) {
     selectMasuk.innerHTML = `
       <option value="">-- Pilih Alat K3 yang Masuk --</option>
@@ -445,9 +583,15 @@ function populateDropdowns() {
   if (filterTxBarang) {
     filterTxBarang.innerHTML = `
       <option value="ALL">Semua Alat K3</option>
-      ${enriched.map(i => `<option value="${i.id}">${escapeHtml(i.nama)}${activeUnitId === 'ALL' ? ` [${getUnitShortName(i.unitId)}]` : ''}</option>`).join('')}
+      ${enriched.map(i => `<option value="${escapeHtml(i.id)}">${escapeHtml(i.nama)}${activeUnitId === 'ALL' ? ` [${escapeHtml(getUnitShortName(i.unitId))}]` : ''}</option>`).join('')}
     `;
   }
+
+  restore(selectMasuk, prevMasuk, '');
+  restore(selectKeluar, prevKeluar, '');
+  restore(filterTxBarang, prevFilter, 'ALL');
+  if (selectMasuk && selectMasuk.value && selectMasuk.value !== '__NEW__') updateStockNotice('masuk');
+  if (selectKeluar && selectKeluar.value) updateStockNotice('keluar');
 }
 
 // Update current stock notice when item is chosen in Keluar/Masuk form
@@ -623,8 +767,8 @@ function renderTransactionTables() {
             <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(t.keperluan || 'Operasional K3')}</div>
           </td>
           <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(t.keterangan || '-')}</td>
-          <td style="text-align: center;">
-            <button class="btn btn-sm btn-outline" style="color: var(--danger); border-color: #fca5a5;" onclick="confirmDeleteTx('${t.id}')" title="Hapus Riwayat">
+          <td class="admin-only" style="text-align: center;">
+            <button class="btn btn-sm btn-outline" style="color: var(--danger); border-color: #fca5a5;" onclick="confirmDeleteTx('${escapeHtml(t.id)}')" title="Hapus Riwayat">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </td>
@@ -707,7 +851,7 @@ function renderReportTable() {
 // =================== ACTIONS & EVENTS ===================
 
 // Handle Tambah Alat Baru (Modal or Direct)
-function handleAddNewItem(formData, isInline = false) {
+async function handleAddNewItem(formData, isInline = false) {
   const targetUnit = formData.unitId || (activeUnitId !== 'ALL' ? activeUnitId : 'TRK');
   const rawNama = formData.nama ? formData.nama.trim().toUpperCase() : '';
   const satuan = formData.satuan ? formData.satuan.trim().toUpperCase() : 'PCS';
@@ -763,8 +907,8 @@ function handleAddNewItem(formData, isInline = false) {
     createdAt: new Date().toISOString()
   };
 
+  await DB.addItem(newItem);
   items.push(newItem);
-  saveItems();
 
   // If item was added for a unit different from current active (and not ALL), switch to that unit
   if (activeUnitId !== 'ALL' && activeUnitId !== targetUnit) {
@@ -780,6 +924,10 @@ function handleAddNewItem(formData, isInline = false) {
 // Handle Form Submit: Barang Masuk
 function handleSubmitBarangMasuk(e) {
   e.preventDefault();
+  runWrite(() => submitBarangMasuk(), e.submitter);
+}
+
+async function submitBarangMasuk() {
   let barangId = document.getElementById('masuk-barang-id').value;
   const tanggal = document.getElementById('masuk-tanggal').value || new Date().toISOString();
   const jumlah = parseInt(document.getElementById('masuk-jumlah').value, 10);
@@ -808,7 +956,7 @@ function handleSubmitBarangMasuk(e) {
       return;
     }
 
-    const newItem = handleAddNewItem({
+    const newItem = await handleAddNewItem({
       unitId: inlineUnit,
       nama: inlineNama,
       satuan: inlineSatuan,
@@ -828,7 +976,7 @@ function handleSubmitBarangMasuk(e) {
   }
 
   const newTx = {
-    id: 'TX-IN-' + Date.now(),
+    id: newId('TX-IN'),
     tanggal: tanggal,
     jenis: 'MASUK',
     unitId: targetItem.unitId || 'TRK',
@@ -841,9 +989,7 @@ function handleSubmitBarangMasuk(e) {
     keterangan: keterangan
   };
 
-  transactions.push(newTx);
-  saveTransactions();
-  renderAll();
+  await DB.addTx(newTx);
   
   // Reset Form
   document.getElementById('form-barang-masuk').reset();
@@ -858,6 +1004,10 @@ function handleSubmitBarangMasuk(e) {
 // Handle Form Submit: Barang Keluar
 function handleSubmitBarangKeluar(e) {
   e.preventDefault();
+  runWrite(() => submitBarangKeluar(), e.submitter);
+}
+
+async function submitBarangKeluar() {
   const barangId = document.getElementById('keluar-barang-id').value;
   const tanggal = document.getElementById('keluar-tanggal').value || new Date().toISOString();
   const jumlah = parseInt(document.getElementById('keluar-jumlah').value, 10);
@@ -895,7 +1045,7 @@ function handleSubmitBarangKeluar(e) {
   }
 
   const newTx = {
-    id: 'TX-OUT-' + Date.now(),
+    id: newId('TX-OUT'),
     tanggal: tanggal,
     jenis: 'KELUAR',
     unitId: targetItem.unitId || 'TRK',
@@ -908,9 +1058,7 @@ function handleSubmitBarangKeluar(e) {
     keterangan: keterangan
   };
 
-  transactions.push(newTx);
-  saveTransactions();
-  renderAll();
+  await DB.addTx(newTx);
 
   // Reset Form
   document.getElementById('form-barang-keluar').reset();
@@ -921,7 +1069,7 @@ function handleSubmitBarangKeluar(e) {
 }
 
 // Delete item
-function confirmDeleteItem(itemId) {
+async function confirmDeleteItem(itemId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
 
@@ -932,25 +1080,76 @@ function confirmDeleteItem(itemId) {
   }
 
   if (confirm(confirmMsg)) {
-    items = items.filter(i => i.id !== itemId);
-    transactions = transactions.filter(t => t.barangId !== itemId);
-    saveItems();
-    saveTransactions();
-    renderAll();
-    showToast(`Alat "${item.nama}" berhasil dihapus.`, 'warning');
+    const ok = await runWrite(() => DB.deleteItem(itemId));
+    if (ok) showToast(`Alat "${item.nama}" berhasil dihapus.`, 'warning');
   }
 }
 
 // Delete transaction
-function confirmDeleteTx(txId) {
+async function confirmDeleteTx(txId) {
   const tx = transactions.find(t => t.id === txId);
   if (!tx) return;
 
+  if (tx.jenis === 'MASUK') {
+    const it = getEnrichedItems('ALL').find(i => i.id === tx.barangId);
+    if (it && it.sisa - tx.jumlah < 0) {
+      showToast(`Transaksi ini tidak bisa dihapus: stok ${it.nama} akan menjadi minus (${it.sisa - tx.jumlah}). Hapus dulu transaksi keluar terkait.`, 'danger');
+      return;
+    }
+  }
+
   if (confirm(`Hapus catatan transaksi ${tx.jenis} sebanyak ${tx.jumlah} ${tx.satuan} ${tx.namaBarang}? Stok sisa akan otomatis dihitung ulang.`)) {
-    transactions = transactions.filter(t => t.id !== txId);
-    saveTransactions();
-    renderAll();
-    showToast('Transaksi berhasil dihapus dan stok diperbarui.', 'success');
+    const ok = await runWrite(() => DB.deleteTx(txId));
+    if (ok) showToast('Transaksi berhasil dihapus dan stok diperbarui.', 'success');
+  }
+}
+
+// Edit item (ubah data master alat)
+function openEditItem(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  document.getElementById('edit-item-id').value = item.id;
+  document.getElementById('edit-item-code').textContent = `${item.id} — ${getUnitName(item.unitId)}`;
+  document.getElementById('edit-nama').value = item.nama || '';
+  document.getElementById('edit-satuan').value = item.satuan || 'PCS';
+  document.getElementById('edit-stokawal').value = Number(item.stokAwal || 0);
+  document.getElementById('edit-minstok').value = Number(item.minStok ?? 2);
+  document.getElementById('edit-kategori').value = item.kategori || '';
+  document.getElementById('edit-lokasi').value = item.lokasi || 'Lemari K3';
+  document.getElementById('edit-keterangan').value = item.keterangan || '';
+  openModal('modal-edit-item');
+}
+
+async function handleSubmitEditItem(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-item-id').value;
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  const nama = document.getElementById('edit-nama').value.trim().toUpperCase();
+  const satuan = document.getElementById('edit-satuan').value.trim().toUpperCase() || 'PCS';
+  const stokAwal = Math.max(0, parseInt(document.getElementById('edit-stokawal').value, 10) || 0);
+  const minStok = Math.max(0, parseInt(document.getElementById('edit-minstok').value, 10) || 0);
+
+  if (!nama) { showToast('Nama alat K3 wajib diisi!', 'danger'); return; }
+  const dup = items.find(i => i.id !== id && i.unitId === item.unitId && i.nama.toUpperCase() === nama);
+  if (dup) { showToast(`Nama "${nama}" sudah dipakai oleh ${dup.id} di unit yang sama.`, 'warning'); return; }
+
+  const enr = getEnrichedItems('ALL').find(i => i.id === id);
+  if (enr && stokAwal + enr.masuk - enr.keluar < 0) {
+    showToast(`Stok awal terlalu kecil: sisa akan menjadi minus (${stokAwal + enr.masuk - enr.keluar}).`, 'danger');
+    return;
+  }
+
+  const ok = await runWrite(() => DB.updateItem(id, {
+    nama, satuan, stokAwal, minStok,
+    kategori: document.getElementById('edit-kategori').value.trim(),
+    lokasi: document.getElementById('edit-lokasi').value.trim() || 'Lemari K3',
+    keterangan: document.getElementById('edit-keterangan').value.trim()
+  }), e.submitter);
+  if (ok) {
+    closeModal('modal-edit-item');
+    showToast(`Data alat ${nama} berhasil diperbarui.`, 'success');
   }
 }
 
@@ -1021,35 +1220,44 @@ function showToast(message, type = 'info') {
 }
 
 // Export to CSV Helper
-function exportStockToCSV() {
-  const enriched = getEnrichedItems();
-  const headers = ["No", "Kantor / Unit", "Kode Barang", "Nama Alat K3", "Satuan", "Stok Awal", "Total Masuk", "Total Keluar", "Sisa Stok", "Status", "Lokasi", "Keterangan"];
-  
-  const rows = enriched.map((i, idx) => [
-    idx + 1,
-    `"${getUnitName(i.unitId)}"`,
-    `"${i.id}"`,
-    `"${i.nama}"`,
-    `"${i.satuan}"`,
-    i.stokAwal,
-    i.masuk,
-    i.keluar,
-    i.sisa,
-    `"${i.status}"`,
-    `"${i.lokasi || ''}"`,
-    `"${(i.keterangan || '').replace(/"/g, '""')}"`
-  ]);
+// Escape sel CSV; awali dengan ' jika diawali = + - @ agar tidak dieksekusi sebagai rumus Excel
+function csvCell(value) {
+  if (typeof value === 'number') return String(value);
+  let s = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+}
 
-  let csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.map(e => e.join(";")).join("\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const unitTag = (activeUnitId === 'ALL') ? 'Semua_Unit' : getUnitShortName(activeUnitId).replace(/\s+/g, '_');
-  a.download = `Rekap_Alat_K3_LPPNPI_${unitTag}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildCsv(headers, rows) {
+  return "﻿" + headers.map(csvCell).join(";") + "\n" + rows.map(r => r.map(csvCell).join(";")).join("\n");
+}
+
+function unitFileTag() {
+  return (activeUnitId === 'ALL') ? 'Semua_Unit' : getUnitShortName(activeUnitId).replace(/\s+/g, '_');
+}
+
+function exportStockToCSV() {
+  const enriched = getEnrichedItems();
+  const headers = ["No", "Kantor / Unit", "Kode Barang", "Nama Alat K3", "Satuan", "Stok Awal", "Total Masuk", "Total Keluar", "Sisa Stok", "Status", "Lokasi", "Keterangan"];
+  const rows = enriched.map((i, idx) => [
+    idx + 1, getUnitName(i.unitId), i.id, i.nama, i.satuan, i.stokAwal, i.masuk, i.keluar,
+    i.sisa, i.status, i.lokasi || '', i.keterangan || ''
+  ]);
+  downloadFile(buildCsv(headers, rows),
+    `Rekap_Alat_K3_LPPNPI_${unitFileTag()}_${new Date().toISOString().slice(0, 10)}.csv`,
+    'text/csv;charset=utf-8;');
   showToast('File CSV Rekap Stok berhasil diunduh!', 'success');
 }
 
@@ -1058,39 +1266,19 @@ function exportTransactionsToCSV() {
   if (activeUnitId !== 'ALL') {
     list = list.filter(t => (t.unitId || 'TRK') === activeUnitId);
   }
-
   if (list.length === 0) {
     showToast('Belum ada transaksi untuk diekspor!', 'warning');
     return;
   }
   const headers = ["No", "Kantor / Unit", "ID Transaksi", "Tanggal", "Jenis", "Kode Alat", "Nama Alat K3", "Jumlah", "Satuan", "Petugas / Penerima", "Keperluan", "Keterangan"];
-  
-  const sortedTx = list.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-  const rows = sortedTx.map((t, idx) => [
-    idx + 1,
-    `"${getUnitName(t.unitId)}"`,
-    `"${t.id}"`,
-    `"${formatDate(t.tanggal)}"`,
-    `"${t.jenis}"`,
-    `"${t.barangId}"`,
-    `"${t.namaBarang}"`,
-    t.jumlah,
-    `"${t.satuan}"`,
-    `"${(t.petugas || '').replace(/"/g, '""')}"`,
-    `"${(t.keperluan || '').replace(/"/g, '""')}"`,
-    `"${(t.keterangan || '').replace(/"/g, '""')}"`
+  list.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+  const rows = list.map((t, idx) => [
+    idx + 1, getUnitName(t.unitId), t.id, formatDate(t.tanggal), t.jenis, t.barangId, t.namaBarang,
+    Number(t.jumlah), t.satuan, t.petugas || '', t.keperluan || '', t.keterangan || ''
   ]);
-
-  let csvContent = "\uFEFF" + headers.join(";") + "\n" + rows.map(e => e.join(";")).join("\n");
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const unitTag = (activeUnitId === 'ALL') ? 'Semua_Unit' : getUnitShortName(activeUnitId).replace(/\s+/g, '_');
-  a.download = `Riwayat_Mutasi_K3_LPPNPI_${unitTag}_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  downloadFile(buildCsv(headers, rows),
+    `Riwayat_Mutasi_K3_LPPNPI_${unitFileTag()}_${new Date().toISOString().slice(0, 10)}.csv`,
+    'text/csv;charset=utf-8;');
   showToast('File CSV Mutasi Transaksi berhasil diunduh!', 'success');
 }
 
@@ -1103,15 +1291,9 @@ function backupData() {
     items: items,
     transactions: transactions
   };
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Backup_K3_LPPNPI_Tarakan_MultiUnit_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  downloadFile(JSON.stringify(data, null, 2),
+    `Backup_K3_LPPNPI_Tarakan_MultiUnit_${new Date().toISOString().slice(0, 10)}.json`,
+    'application/json');
   showToast('Cadangan database JSON seluruh unit berhasil disimpan!', 'success');
 }
 
@@ -1121,29 +1303,21 @@ function restoreData(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.items || !Array.isArray(data.items)) {
         throw new Error('Format file cadangan tidak sesuai.');
       }
-      if (confirm('Apakah Anda yakin ingin memulihkan data dari cadangan ini? Data yang ada saat ini akan digantikan.')) {
-        items = data.items;
-        // Pastikan unitId ada di setiap item
-        items.forEach(it => {
-          if (!it.unitId) it.unitId = 'TRK';
-        });
-        transactions = Array.isArray(data.transactions) ? data.transactions : [];
-        transactions.forEach(t => {
-          if (!t.unitId) {
-            const matchedItem = items.find(i => i.id === t.barangId);
-            t.unitId = matchedItem ? (matchedItem.unitId || 'TRK') : 'TRK';
-          }
-        });
-        saveItems();
-        saveTransactions();
-        renderAll();
-        showToast('Data inventaris K3 berhasil dipulihkan!', 'success');
+      const newItems = data.items.map(it => ({ ...it, unitId: it.unitId || 'TRK' }));
+      const newTx = (Array.isArray(data.transactions) ? data.transactions : []).map(t => {
+        if (t.unitId) return t;
+        const m = newItems.find(i => i.id === t.barangId);
+        return { ...t, unitId: m ? m.unitId : 'TRK' };
+      });
+      if (confirm(`Pulihkan ${newItems.length} alat dan ${newTx.length} transaksi dari cadangan ini?\n\nSELURUH data yang ada saat ini akan digantikan.`)) {
+        const ok = await runWrite(() => DB.importAll(newItems, newTx, true));
+        if (ok) showToast('Data inventaris K3 berhasil dipulihkan!', 'success');
       }
     } catch (err) {
       alert('Gagal membaca file cadangan: ' + err.message);
@@ -1154,28 +1328,28 @@ function restoreData(event) {
 }
 
 // Reset to Default Initial Data
-function resetToDefault() {
-  if (confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke daftar 6 alat K3 awal Perum LPPNPI Cabang Tarakan? Seluruh data alat unit lain dan riwayat mutasi akan dibersihkan.')) {
-    items = JSON.parse(JSON.stringify(INITIAL_ITEMS));
-    transactions = [];
-    activeUnitId = 'TRK';
-    localStorage.setItem(STORAGE_KEY_ACTIVE_UNIT, 'TRK');
-    saveItems();
-    saveTransactions();
-    
-    const sel = document.getElementById('select-active-unit');
-    if (sel) sel.value = 'TRK';
-    const badge = document.getElementById('header-badge-branch');
-    if (badge) badge.textContent = getUnit('TRK').badge;
-
-    renderAll();
-    showToast('Sistem telah direset ke data awal Tarakan.', 'info');
+async function resetToDefault() {
+  if (!confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke daftar 6 alat K3 awal Perum LPPNPI Cabang Tarakan? Seluruh data alat unit lain dan riwayat mutasi akan dibersihkan.')) return;
+  if (DB.mode === 'cloud' && prompt('Data di database cloud akan dihapus permanen. Ketik RESET untuk melanjutkan:') !== 'RESET') {
+    showToast('Reset dibatalkan.', 'info');
+    return;
   }
+  const ok = await runWrite(() => DB.importAll(JSON.parse(JSON.stringify(INITIAL_ITEMS)), [], true));
+  if (!ok) return;
+
+  activeUnitId = 'TRK';
+  localStorage.setItem(STORAGE_KEY_ACTIVE_UNIT, 'TRK');
+  const sel = document.getElementById('select-active-unit');
+  if (sel) sel.value = 'TRK';
+  const badge = document.getElementById('header-badge-branch');
+  if (badge) badge.textContent = getUnit('TRK').badge;
+  renderAll();
+  showToast('Sistem telah direset ke data awal Tarakan.', 'info');
 }
 
 // Utility: Escape HTML
 function escapeHtml(str) {
-  if (!str) return '';
+  if (str === null || str === undefined) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -1213,8 +1387,9 @@ function setupEventListeners() {
   // Modal Tambah Item Baru
   const formNewItemModal = document.getElementById('form-new-item-modal');
   if (formNewItemModal) {
-    formNewItemModal.addEventListener('submit', (e) => {
+    formNewItemModal.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = e.submitter;
       const unitId = document.getElementById('modal-new-unit')?.value || 'TRK';
       const nama = document.getElementById('modal-new-nama').value;
       const satuan = document.getElementById('modal-new-satuan').value;
@@ -1224,7 +1399,10 @@ function setupEventListeners() {
       const lokasi = document.getElementById('modal-new-lokasi').value;
       const keterangan = document.getElementById('modal-new-keterangan').value;
 
-      const res = handleAddNewItem({ unitId, nama, satuan, stokAwal, minStok, kategori, lokasi, keterangan });
+      let res = null;
+      await runWrite(async () => {
+        res = await handleAddNewItem({ unitId, nama, satuan, stokAwal, minStok, kategori, lokasi, keterangan });
+      }, submitBtn);
       if (res) {
         formNewItemModal.reset();
         closeModal('modal-add-item');
@@ -1232,6 +1410,20 @@ function setupEventListeners() {
     });
   }
 
+  // Form edit alat
+  const formEdit = document.getElementById('form-edit-item');
+  if (formEdit) formEdit.addEventListener('submit', handleSubmitEditItem);
+
+  // Login admin
+  const formLogin = document.getElementById('form-login');
+  if (formLogin) formLogin.addEventListener('submit', handleLogin);
+
+  // Tutup modal dengan tombol Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    }
+  });
 
 
   // Stock Notice Listeners

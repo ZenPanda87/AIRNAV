@@ -39,3 +39,21 @@ $RECYCLE.BIN/
 # VS Code (Abaikan selain launch.json)
 .vscode/*
 !.vscode/launch.json
+
+# Dokumentasi teknis internal (tidak dipublikasikan)
+README_TEKNIS.md
+
+# Vercel & Supabase CLI lokal
+.vercel/
+supabase/.temp/
+.env
+.env.*
+node_modules/
+
+
+# Kredensial lokal (JANGAN di-commit)
+ADMIN_CREDENTIALS.txt
+*.txt
+
+.vercel
+.env*

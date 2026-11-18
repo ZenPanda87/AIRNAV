@@ -3,8 +3,12 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a3d62">
+  <meta name="description" content="Sistem Rekapitulasi Inventaris Alat K3 Perum LPPNPI Cabang Tarakan & Unit Kerja Bawahan">
+  <meta name="robots" content="noindex, nofollow">
   <title>Sistem Rekapitulasi Alat K3 - Perum LPPNPI Cabang Tarakan</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230a3d62'/%3E%3Cpath d='M12 20s6-3 6-8V6.5l-6-2.25L6 6.5V12c0 5 6 8 6 8z' fill='none' stroke='%23f59e0b' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
@@ -63,6 +67,35 @@
           <option value="ALL">🌐 Semua Unit (Konsolidasi)</option>
         </select>
       </div>
+
+      <!-- STATUS KONEKSI & LOGIN ADMIN -->
+      <div class="header-actions no-print">
+        <span id="conn-status" class="conn-status">Memuat...</span>
+        <button id="btn-login" class="btn btn-login" type="button" onclick="openModal('modal-login')" style="display: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Login Admin
+        </button>
+        <div id="admin-user-box" class="admin-user-box" style="display: none;">
+          <span class="admin-chip" title="Login sebagai admin">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span id="admin-user-email">admin</span>
+          </span>
+          <button class="btn btn-logout" type="button" onclick="handleLogout()" title="Logout">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span class="hide-sm">Logout</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -77,31 +110,31 @@
           <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
           <line x1="12" y1="22.08" x2="12" y2="12"></line>
         </svg>
-        Rekap Stok Alat K3
+        <span class="lbl-full">Rekap Stok Alat K3</span><span class="lbl-short">Stok</span>
         <span class="tab-badge" id="badge-tab-items">6</span>
       </button>
 
-      <button class="tab-btn" data-tab="tab-masuk">
+      <button class="tab-btn admin-only" data-tab="tab-masuk">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <polyline points="19 12 12 19 5 12"></polyline>
         </svg>
-        Barang Masuk
+        <span class="lbl-full">Barang Masuk</span><span class="lbl-short">Masuk</span>
       </button>
 
-      <button class="tab-btn" data-tab="tab-keluar">
+      <button class="tab-btn admin-only" data-tab="tab-keluar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="19" x2="12" y2="5"></line>
           <polyline points="5 12 12 5 19 12"></polyline>
         </svg>
-        Barang Keluar
+        <span class="lbl-full">Barang Keluar</span><span class="lbl-short">Keluar</span>
       </button>
 
       <button class="tab-btn" data-tab="tab-mutasi">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
-        Riwayat Mutasi
+        <span class="lbl-full">Riwayat Mutasi</span><span class="lbl-short">Riwayat</span>
         <span class="tab-badge" id="badge-tab-tx">0</span>
       </button>
 
@@ -113,13 +146,37 @@
           <line x1="16" y1="17" x2="8" y2="17"></line>
           <polyline points="10 9 9 9 8 9"></polyline>
         </svg>
-        Laporan &amp; Cetak
+        <span class="lbl-full">Laporan &amp; Cetak</span><span class="lbl-short">Laporan</span>
       </button>
     </div>
   </nav>
 
   <!-- ==================== MAIN BODY ==================== -->
   <main class="main-container">
+
+    <!-- BANNER MODE LIHAT SAJA -->
+    <div class="info-banner readonly-banner no-print">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <span>Mode <strong>lihat saja</strong>. Login sebagai admin untuk mencatat barang masuk/keluar dan mengubah data.</span>
+      <button class="btn btn-sm btn-primary" type="button" onclick="openModal('modal-login')">Login Admin</button>
+    </div>
+
+    <!-- BANNER DATA LOKAL LAMA -->
+    <div id="legacy-banner" class="info-banner legacy-banner no-print" style="display: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="16 16 12 12 8 16"></polyline>
+        <line x1="12" y1="12" x2="12" y2="21"></line>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+      </svg>
+      <span>Ditemukan data versi offline di peramban ini (<strong id="legacy-count">-</strong>). Unggah ke database cloud?</span>
+      <div class="banner-actions">
+        <button class="btn btn-sm btn-primary" type="button" onclick="uploadLegacyData(this)">Unggah ke Cloud</button>
+        <button class="btn btn-sm btn-outline" type="button" onclick="dismissLegacyData()">Abaikan</button>
+      </div>
+    </div>
 
     <!-- KPI STATS OVERVIEW (Always visible on top) -->
     <div class="stats-grid no-print">
@@ -225,7 +282,7 @@
               Ekspor CSV
             </button>
 
-            <button class="btn btn-primary" onclick="openModal('modal-add-item')">
+            <button class="btn btn-primary admin-only" onclick="openModal('modal-add-item')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -236,7 +293,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="data-table">
+          <table class="data-table table-cards">
             <thead>
               <tr>
                 <th style="width: 45px; text-align: center;">No</th>
@@ -248,7 +305,7 @@
                 <th style="text-align: center; width: 105px;">Barang Keluar</th>
                 <th style="text-align: center; width: 110px;">Sisa Unit</th>
                 <th style="text-align: center; width: 110px;">Status</th>
-                <th style="text-align: center; width: 80px;">Aksi</th>
+                <th class="admin-only" style="text-align: center; width: 150px;">Aksi</th>
               </tr>
             </thead>
             <tbody id="master-table-body">
@@ -377,7 +434,7 @@
           <h3 class="card-title">5 Penerimaan Barang Masuk Terakhir</h3>
         </div>
         <div class="table-responsive">
-          <table class="data-table">
+          <table class="data-table table-cards">
             <thead>
               <tr>
                 <th style="width: 45px;">No</th>
@@ -479,7 +536,7 @@
           <h3 class="card-title">5 Pengeluaran Barang Terakhir</h3>
         </div>
         <div class="table-responsive">
-          <table class="data-table">
+          <table class="data-table table-cards">
             <thead>
               <tr>
                 <th style="width: 45px;">No</th>
@@ -546,7 +603,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="data-table">
+          <table class="data-table table-cards">
             <thead>
               <tr>
                 <th style="width: 45px; text-align: center;">No</th>
@@ -556,7 +613,7 @@
                 <th style="text-align: center; width: 110px;">Jumlah</th>
                 <th>Petugas / Unit</th>
                 <th>Catatan / Keterangan</th>
-                <th style="text-align: center; width: 65px;">Aksi</th>
+                <th class="admin-only" style="text-align: center; width: 65px;">Aksi</th>
               </tr>
             </thead>
             <tbody id="tx-all-table-body">
@@ -601,7 +658,7 @@
               </svg>
               Cadangkan (Backup JSON)
             </button>
-            <label class="btn btn-outline" style="cursor: pointer; margin: 0;">
+            <label class="btn btn-outline admin-only" style="cursor: pointer; margin: 0;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
@@ -610,7 +667,7 @@
               Pulihkan (Restore)
               <input type="file" id="file-restore" style="display: none;" accept=".json" onchange="restoreData(event)">
             </label>
-            <button class="btn btn-outline" style="color: var(--danger); border-color: #fca5a5;"
+            <button class="btn btn-outline admin-only" style="color: var(--danger); border-color: #fca5a5;"
               onclick="resetToDefault()">
               Reset ke Awal
             </button>
@@ -759,10 +816,108 @@
   </div>
 
 
+  <!-- ==================== MODAL: UBAH ALAT K3 ==================== -->
+  <div id="modal-edit-item" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          Ubah Data Alat K3
+        </h3>
+        <button class="modal-close-btn" type="button" onclick="closeModal('modal-edit-item')">&times;</button>
+      </div>
+      <form id="form-edit-item">
+        <input type="hidden" id="edit-item-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <span class="badge-code" id="edit-item-code">-</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-nama">Nama Alat K3 <span class="required">*</span></label>
+            <input type="text" id="edit-nama" class="form-control" required>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="edit-satuan">Satuan <span class="required">*</span></label>
+              <input type="text" id="edit-satuan" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-stokawal">Stok Awal</label>
+              <input type="number" id="edit-stokawal" class="form-control" min="0" inputmode="numeric">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="edit-minstok">Batas Peringatan Stok Menipis</label>
+              <input type="number" id="edit-minstok" class="form-control" min="0" inputmode="numeric">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-kategori">Kategori</label>
+              <input type="text" id="edit-kategori" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-lokasi">Lokasi Penyimpanan / Keberadaan</label>
+            <input type="text" id="edit-lokasi" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-keterangan">Keterangan / Spesifikasi</label>
+            <textarea id="edit-keterangan" class="form-control"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-edit-item')">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: LOGIN ADMIN ==================== -->
+  <div id="modal-login" class="modal-overlay">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Login Admin
+        </h3>
+        <button class="modal-close-btn" type="button" onclick="closeModal('modal-login')">&times;</button>
+      </div>
+      <form id="form-login">
+        <div class="modal-body">
+          <p class="input-help" style="margin: 0 0 1rem;">Khusus petugas pengelola K3. Pengunjung tanpa login hanya dapat melihat data.</p>
+          <div id="login-error" class="login-error" style="display: none;"></div>
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email</label>
+            <input type="email" id="login-email" class="form-control" autocomplete="username" required
+              placeholder="admin@contoh.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-control" autocomplete="current-password" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-login')">Batal</button>
+          <button type="submit" id="btn-login-submit" class="btn btn-primary">Masuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== TOAST NOTIFICATIONS ==================== -->
   <div id="toast-container" class="toast-container no-print"></div>
 
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/db.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 
