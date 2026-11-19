@@ -78,7 +78,7 @@ body {
 .brand-logo-airnav {
   background: #ffffff;
   border-radius: var(--radius);
-  padding: 6px 12px;
+  padding: 6px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -93,7 +93,7 @@ body {
 
 @media (max-width: 768px) {
   .brand-logo-airnav {
-    padding: 4px 8px;
+    padding: 4px;
   }
   .brand-logo-airnav img {
     height: 28px;
@@ -850,7 +850,12 @@ textarea.form-control {
     border-bottom: 2px double #000 !important;
   }
 
-  .report-logo {
+  .report-logo-screen {
+    display: none !important;
+  }
+
+  .report-logo-print {
+    display: block !important;
     height: 48px !important;
     margin-bottom: 10px !important;
   }
@@ -899,10 +904,57 @@ textarea.form-control {
     margin-top: 40px;
     page-break-inside: avoid;
   }
+
+  .sign-label,
+  .sign-role,
+  .sign-name {
+    font-size: 10.5pt !important;
+  }
 }
 
+/* Blok tanda tangan laporan (layar & cetak) */
 .print-signature-area {
-  display: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  margin-top: 3rem;
+  padding: 0 2rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.sign-box {
+  width: 250px;
+  text-align: center;
+  color: #000;
+}
+
+.sign-box p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sign-label {
+  font-size: 0.9rem;
+}
+
+.sign-role {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sign-space {
+  height: 75px;
+}
+
+.sign-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #000;
 }
 
 /* Header laporan: logo AirNav di pojok kiri atas */
@@ -913,9 +965,13 @@ textarea.form-control {
   margin: 0 auto 0.75rem 0;
 }
 
+.report-logo-print {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .report-logo {
-    height: 40px;
+    height: 44px;
   }
 }
 

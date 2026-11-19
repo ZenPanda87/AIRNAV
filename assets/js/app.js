@@ -812,16 +812,9 @@ function renderReportTable() {
     reportCardSubtitle.textContent = `Format siap cetak resmi untuk pelaporan manajemen ${getUnitName(activeUnitId)}.`;
   }
 
-  const signPetugasUnit = document.getElementById('sign-petugas-unit');
-  if (signPetugasUnit) {
-    signPetugasUnit.textContent = (activeUnitId === 'ALL') ? 'Perum LPPNPI Cabang Tarakan' : getUnitName(activeUnitId);
-  }
-
   const signPetugasTitle = document.getElementById('sign-petugas-title');
   if (signPetugasTitle) {
-    signPetugasTitle.textContent = (activeUnitId === 'ALL') 
-      ? 'Petugas Pengelola K3 Cabang Tarakan' 
-      : `Petugas Pengelola K3 ${getUnitShortName(activeUnitId)}`;
+    signPetugasTitle.textContent = 'Petugas Pengelola K3';
   }
 
   if (enriched.length === 0) {

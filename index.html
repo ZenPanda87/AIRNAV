@@ -19,7 +19,7 @@
     <div class="header-container">
       <div class="brand-wrapper">
         <div class="brand-logo-airnav">
-          <img src="assets/img/logo-airnav.png" alt="AirNav Indonesia">
+          <img src="assets/img/logo-airnav-icon.png" alt="AirNav Indonesia">
         </div>
         <div class="brand-info">
           <h1>
@@ -659,7 +659,8 @@
         <div class="card-body">
           <div class="report-header-block"
             style="margin-bottom: 1.5rem; text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem;">
-            <img src="assets/img/logo-airnav.png" alt="AirNav Indonesia" class="report-logo">
+            <img src="assets/img/logo-airnav-icon.png" alt="AirNav Indonesia" class="report-logo report-logo-screen no-print">
+            <img src="assets/img/logo-airnav.png" alt="AirNav Indonesia" class="report-logo report-logo-print">
             <h3 class="report-main-title" style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">REKAPITULASI INVENTARIS ALAT
               KESELAMATAN &amp; KESEHATAN KERJA (K3)</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem;" id="report-unit-subtitle">PERUM LPPNPI CABANG
@@ -690,26 +691,19 @@
           </div>
 
           <!-- SIGNATURE BLOCK (Visible on Print and in Report tab) -->
-          <div class="print-signature-area"
-            style="display: flex; justify-content: space-between; margin-top: 3.5rem; padding: 0 2rem;">
-            <div style="text-align: center; width: 230px;">
-              <p style="font-size: 0.9rem;">Dibuat Oleh,</p>
-              <p style="font-weight: 600; font-size: 0.9rem;" id="sign-petugas-title">Petugas Pengelola K3</p>
-              <div style="height: 70px;"></div>
-              <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
-                ................................................. )</div>
-              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" class="no-print" id="sign-petugas-unit">Perum LPPNPI Cabang
-                Tarakan</div>
+          <div class="print-signature-area">
+            <div class="sign-box">
+              <p class="sign-label">Dibuat Oleh,</p>
+              <p class="sign-role" id="sign-petugas-title">Petugas Pengelola K3</p>
+              <div class="sign-space"></div>
+              <div class="sign-name">( ................................................ )</div>
             </div>
 
-            <div style="text-align: center; width: 250px;">
-              <p style="font-size: 0.9rem;">Mengetahui,</p>
-              <p style="font-weight: 600; font-size: 0.9rem;">Manager Safety</p>
-              <div style="height: 70px;"></div>
-              <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
-                .................................................. )</div>
-              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" class="no-print" id="sign-manager-unit">Perum LPPNPI Cabang
-                Tarakan</div>
+            <div class="sign-box">
+              <p class="sign-label">Mengetahui,</p>
+              <p class="sign-role">Manager Safety</p>
+              <div class="sign-space"></div>
+              <div class="sign-name">( ................................................ )</div>
             </div>
           </div>
 
