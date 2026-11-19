@@ -14,30 +14,12 @@
 
 <body>
 
-  <!-- ==================== PRINT ONLY HEADER ==================== -->
-  <div class="print-only-header">
-    <div style="font-size: 14pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">PERUM LPPNPI</div>
-    <div style="font-size: 12pt; font-weight: 700; color: #333;" id="print-unit-title">CABANG TARAKAN</div>
-    <div style="font-size: 10pt; color: #555; margin-bottom: 8px;">Wilayah Kerja Perum LPPNPI Cabang Tarakan -
-      Kalimantan Utara</div>
-    <div
-      style="font-size: 13pt; font-weight: 800; border-top: 2px solid #000; border-bottom: 1px solid #000; padding: 6px 0; margin-top: 8px;">
-      LAPORAN REKAPITULASI INVENTARIS ALAT K3 (KESELAMATAN & KESEHATAN KERJA)
-    </div>
-    <div style="font-size: 9.5pt; margin-top: 5px; color: #444;" id="print-date-display">Tarakan, -</div>
-  </div>
-
   <!-- ==================== APP HEADER ==================== -->
   <header class="app-header">
     <div class="header-container">
       <div class="brand-wrapper">
-        <div class="brand-logo-badge">
-          <!-- Aviation Safety Shield SVG -->
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
+        <div class="brand-logo-airnav">
+          <img src="assets/img/logo-airnav.png" alt="AirNav Indonesia">
         </div>
         <div class="brand-info">
           <h1>
@@ -675,12 +657,14 @@
         </div>
 
         <div class="card-body">
-          <div
+          <div class="report-header-block"
             style="margin-bottom: 1.5rem; text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem;">
-            <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">REKAPITULASI INVENTARIS ALAT
+            <img src="assets/img/logo-airnav.png" alt="AirNav Indonesia" class="report-logo">
+            <h3 class="report-main-title" style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">REKAPITULASI INVENTARIS ALAT
               KESELAMATAN &amp; KESEHATAN KERJA (K3)</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem;" id="report-unit-subtitle">PERUM LPPNPI CABANG
               TARAKAN</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;" id="print-date-display">Tarakan, -</p>
           </div>
 
           <div class="table-responsive">
@@ -714,7 +698,7 @@
               <div style="height: 70px;"></div>
               <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
                 ................................................. )</div>
-              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" id="sign-petugas-unit">Perum LPPNPI Cabang
+              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" class="no-print" id="sign-petugas-unit">Perum LPPNPI Cabang
                 Tarakan</div>
             </div>
 
@@ -724,7 +708,7 @@
               <div style="height: 70px;"></div>
               <div style="border-bottom: 1px solid #000; font-weight: bold; padding-bottom: 2px;">(
                 .................................................. )</div>
-              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" id="sign-manager-unit">Perum LPPNPI Cabang
+              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;" class="no-print" id="sign-manager-unit">Perum LPPNPI Cabang
                 Tarakan</div>
             </div>
           </div>

@@ -75,6 +75,31 @@ body {
   gap: 1rem;
 }
 
+.brand-logo-airnav {
+  background: #ffffff;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.brand-logo-airnav img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .brand-logo-airnav {
+    padding: 4px 8px;
+  }
+  .brand-logo-airnav img {
+    height: 28px;
+  }
+}
+
 .brand-logo-badge {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(4px);
@@ -817,19 +842,42 @@ textarea.form-control {
 
   #tab-laporan {
     display: block !important;
+    animation: none !important;
+    opacity: 1 !important;
   }
 
-  .print-only-header {
-    display: block !important;
-    margin-bottom: 25px;
-    border-bottom: 2px double #000;
-    padding-bottom: 15px;
-    text-align: center;
+  .report-header-block {
+    border-bottom: 2px double #000 !important;
+  }
+
+  .report-logo {
+    height: 48px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .report-main-title {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #tab-laporan .table-responsive {
+    overflow: visible !important;
   }
 
   .data-table {
     border: 1px solid #000000 !important;
     width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto !important;
+  }
+
+  #tab-laporan .data-table th {
+    white-space: normal !important;
+  }
+
+  #tab-laporan .data-table td code,
+  #tab-laporan .data-table td:nth-child(2) {
+    white-space: nowrap !important;
   }
 
   .data-table th,
@@ -853,9 +901,22 @@ textarea.form-control {
   }
 }
 
-.print-only-header,
 .print-signature-area {
   display: none;
+}
+
+/* Header laporan: logo AirNav di pojok kiri atas */
+.report-logo {
+  display: block;
+  height: 52px;
+  width: auto;
+  margin: 0 auto 0.75rem 0;
+}
+
+@media (max-width: 768px) {
+  .report-logo {
+    height: 40px;
+  }
 }
 
 /* Empty state styling */
