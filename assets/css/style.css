@@ -803,11 +803,23 @@ textarea.form-control {
 .toast.toast-warning { border-left-color: var(--accent); }
 
 /* ================== PRINT STYLES ================== */
+/* Hilangkan header/footer bawaan browser (judul tab, URL, tanggal) saat cetak.
+   Margin halaman 0 membuat browser tidak punya ruang untuk header/footer;
+   jarak tepi kertas diganti padding pada body. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
 @media print {
   body {
     background: #ffffff !important;
     color: #000000 !important;
     font-size: 11pt;
+    margin: 0 !important;
+    padding: 14mm 14mm !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 
   .app-header,
@@ -850,14 +862,15 @@ textarea.form-control {
     border-bottom: 2px double #000 !important;
   }
 
-  .report-logo-screen {
-    display: none !important;
+  .report-logo img {
+    width: 50px !important;
+    height: 50px !important;
   }
 
-  .report-logo-print {
-    display: block !important;
-    height: 48px !important;
-    margin-bottom: 10px !important;
+  .report-logo span {
+    font-size: 8pt !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .report-main-title {
@@ -953,25 +966,46 @@ textarea.form-control {
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
-  padding-bottom: 2px;
-  border-bottom: 1px solid #000;
 }
 
-/* Header laporan: logo AirNav di pojok kiri atas */
+/* Header laporan: logo AirNav di pojok kiri atas (sama di layar & cetak) */
 .report-logo {
-  display: block;
-  height: 52px;
-  width: auto;
-  margin: 0 auto 0.75rem 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  float: left;
+  margin: 0 0 0.75rem 0;
 }
 
-.report-logo-print {
-  display: none;
+.report-logo img {
+  width: 56px;
+  height: 56px;
+  display: block;
+}
+
+.report-logo span {
+  margin-top: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0a3d62;
+  white-space: nowrap;
+}
+
+.report-header-block::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.report-header-block .report-main-title {
+  clear: both;
 }
 
 @media (max-width: 768px) {
-  .report-logo {
-    height: 44px;
+  .report-logo img {
+    width: 46px;
+    height: 46px;
   }
 }
 
@@ -1569,7 +1603,7 @@ body.is-loading .main-container {
 
 @media print {
   body {
-    padding-bottom: 0 !important;
+    padding-bottom: 14mm !important;
   }
   .info-banner {
     display: none !important;
