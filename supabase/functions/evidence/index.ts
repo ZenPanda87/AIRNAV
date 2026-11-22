@@ -75,12 +75,12 @@ Deno.serve(async (req) => {
       const { data: dup } = await db.from("files").select("id").eq("entity", entity).eq("entity_id", String(entityId)).eq("sha256", sha256).is("deleted_at", null).maybeSingle();
       if (dup) return json({ error: "File yang sama sudah ada (duplikat)." }, 409);
 
-      const now = new Date();
+      const now = new Date(Date.now() + 8 * 3600_000); // WITA (UTC+8)
       const p2 = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${now.getFullYear()}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${p2(now.getHours())}${p2(now.getMinutes())}`;
+      const stamp = `${now.getUTCFullYear()}${p2(now.getUTCMonth() + 1)}${p2(now.getUTCDate())}-${p2(now.getUTCHours())}${p2(now.getUTCMinutes())}`;
       const { count } = await db.from("files").select("id", { count: "exact", head: true }).eq("entity", entity).eq("entity_id", String(entityId));
       const ext = mime === "application/pdf" ? "pdf" : mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
-      const year = String(period || "").slice(0, 4).match(/^\d{4}$/) ? String(period).slice(0, 4) : String(now.getFullYear());
+      const year = String(period || "").slice(0, 4).match(/^\d{4}$/) ? String(period).slice(0, 4) : String(now.getUTCFullYear());
       const folderPath = ["AIRNAV-KKS-Evidence", year, safe(unit), safe(domain), safe(module), safe(period || stamp.slice(0, 6))].join("/");
       const name = `${safe(unit)}_${safe(module)}_${String(entityId).slice(0, 8)}_${stamp}_${(count ?? 0) + 1}.${ext}`;
       const share = domain === "KEAMANAN" ? "restricted" : "domain_link";

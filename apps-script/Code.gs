@@ -128,5 +128,11 @@ function setup() {
   const folder = root_();
   child_(folder, TRASH_NAME);
   Logger.log('Folder evidence: ' + folder.getUrl());
-  if (!PropertiesService.getScriptProperties().getProperty('TOKEN')) Logger.log('PERINGATAN: Script property TOKEN belum diisi!');
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('TOKEN')) {
+    // Token dibuat otomatis (48 karakter acak) bila belum diisi manual.
+    const token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').slice(0, 48);
+    props.setProperty('TOKEN', token);
+  }
+  Logger.log('TOKEN (salin ke secret Supabase APPS_SCRIPT_TOKEN): ' + props.getProperty('TOKEN'));
 }
