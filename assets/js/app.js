@@ -11,7 +11,9 @@ const UNITS = [
   { id: "NNX", name: "Perum LPPNPI Unit Nunukan", shortName: "Nunukan", type: "Unit", badge: "UNIT NUNUKAN", prefix: "NNX", city: "Nunukan" },
   { id: "TJS", name: "Perum LPPNPI Unit Tanjung Harapan", shortName: "Tanjung Harapan", type: "Unit", badge: "UNIT TANJUNG HARAPAN", prefix: "TJS", city: "Tanjung Selor" },
   { id: "LBW", name: "Perum LPPNPI Unit Long Bawan", shortName: "Long Bawan", type: "Unit", badge: "UNIT LONG BAWAN", prefix: "LBW", city: "Long Bawan" },
-  { id: "LPU", name: "Perum LPPNPI Unit Long Apung", shortName: "Long Apung", type: "Unit", badge: "UNIT LONG APUNG", prefix: "LPU", city: "Long Apung" }
+  { id: "LPU", name: "Perum LPPNPI Unit Long Apung", shortName: "Long Apung", type: "Unit", badge: "UNIT LONG APUNG", prefix: "LPU", city: "Long Apung" },
+  { id: "LYU", name: "Perum LPPNPI Unit Long Layu", shortName: "Long Layu", type: "Unit", badge: "UNIT LONG LAYU", prefix: "LYU", city: "Long Layu" },
+  { id: "BNG", name: "Perum LPPNPI Unit Binuang", shortName: "Binuang", type: "Unit", badge: "UNIT BINUANG", prefix: "BNG", city: "Binuang" }
 ];
 
 // Key Storage (data alat & transaksi dikelola oleh db.js)

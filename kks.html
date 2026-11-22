@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a3d62">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sistem KKS Terpadu — AirNav Indonesia</title>
+  <link rel="icon" href="assets/img/logo-airnav-icon.png">
+  <link rel="stylesheet" href="assets/css/kks.css">
+</head>
+<body>
+  <div id="k-boot" class="k-boot">Memuat Sistem KKS…</div>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="k-login" class="k-login" hidden>
+    <form id="k-login-form" class="k-login-card">
+      <div class="k-login-logo"><img src="assets/img/logo-airnav-icon.png" alt="AirNav Indonesia"></div>
+      <h1>Sistem Informasi KKS Terpadu</h1>
+      <p class="k-login-sub">Keselamatan · Keamanan · K3 · Pengawasan<br>Perum LPPNPI Cabang Tarakan &amp; Klaster</p>
+      <label class="k-field"><span>Email</span><input id="k-email" class="k-input" type="email" autocomplete="username" required></label>
+      <label class="k-field"><span>Password</span><input id="k-pass" class="k-input" type="password" autocomplete="current-password" required></label>
+      <p id="k-login-msg" class="k-login-msg"></p>
+      <button id="k-login-btn" class="k-btn k-btn-primary k-btn-block" type="submit">Masuk</button>
+      <a class="k-login-link" href="index.html">← Lihat ringkasan inventaris APD (tanpa login)</a>
+    </form>
+  </section>
+
+  <!-- ============ APLIKASI ============ -->
+  <div id="k-app" class="k-app" hidden>
+    <header class="k-top">
+      <button id="k-menu-btn" class="k-icon-btn k-menu-btn" type="button" title="Menu">☰</button>
+      <a class="k-brand" href="#/dashboard">
+        <span class="k-brand-logo"><img src="assets/img/logo-airnav-icon.png" alt="AirNav Indonesia"></span>
+        <span class="k-brand-text"><b>Sistem KKS Terpadu</b><small>Perum LPPNPI Cabang Tarakan</small></span>
+      </a>
+      <div class="k-top-right">
+        <label class="k-unit-wrap" title="Lokasi aktif">📍 <select id="k-unit" class="k-input"></select></label>
+        <div class="k-user"><b id="k-user-name"></b><small id="k-user-role"></small></div>
+        <button id="k-logout" class="k-btn k-btn-sm" type="button">Keluar</button>
+      </div>
+    </header>
+    <aside id="k-sidebar" class="k-sidebar"><nav id="k-nav" class="k-nav"></nav></aside>
+    <main id="k-main" class="k-main"></main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/kks/core.js"></script>
+  <script src="assets/js/kks/ref.js"></script>
+  <script src="assets/js/kks/print.js"></script>
+  <script src="assets/js/kks/evidence.js"></script>
+  <script src="assets/js/kks/crud.js"></script>
+  <script src="assets/js/kks/mod_core.js"></script>
+  <script src="assets/js/kks/mod_k3.js"></script>
+  <script src="assets/js/kks/mod_pengawasan.js"></script>
+  <script src="assets/js/kks/mod_keselamatan.js"></script>
+  <script src="assets/js/kks/mod_keamanan.js"></script>
+  <script>KKS.start();</script>
+</body>
+</html>

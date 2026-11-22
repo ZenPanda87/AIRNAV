@@ -1097,6 +1097,12 @@ body.is-loading .main-container {
 .btn-login:hover {
   background: #fbbf24;
 }
+.btn-kks {
+  background: #fff;
+  color: var(--primary);
+  text-decoration: none;
+}
+.btn-kks:hover { background: var(--primary-light); }
 
 .admin-user-box {
   align-items: center;

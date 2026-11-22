@@ -9,6 +9,7 @@ bahan/
 *.md
 .vscode/
 supabase/
+apps-script/
 Backup_K3_*.json
 *.txt
 .env
