@@ -1264,6 +1264,13 @@ body.is-loading .main-container {
   .btn-logout {
     padding: 0.5rem 0.6rem;
   }
+  .btn-kks {
+    padding: 0.5rem 0.6rem;
+    gap: 0.3rem;
+  }
+  .brand-logo-airnav {
+    flex-shrink: 0;
+  }
   .unit-selector-wrapper {
     order: 3;
     flex: 1 1 100%;

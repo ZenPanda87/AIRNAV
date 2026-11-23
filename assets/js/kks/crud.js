@@ -49,7 +49,7 @@
         return h('span', {}, h('input', { ...attrs, list: dl, value: value ?? f.def ?? '' }), h('datalist', { id: dl }, optsOf(f).map(([v]) => h('option', { value: v }))));
       }
       case 'multi': {
-        const vals = new Set(Array.isArray(value) ? value : []);
+        const vals = new Set(Array.isArray(value) ? value : (Array.isArray(f.def) ? f.def : []));
         return h('div', { class: 'k-multi', id, 'data-multi': f.k }, optsOf(f).map(([v, l]) =>
           h('label', { class: 'k-check' }, h('input', { type: 'checkbox', value: v, checked: vals.has(v) || null }), ' ', l)));
       }

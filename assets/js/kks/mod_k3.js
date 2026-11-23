@@ -238,7 +238,7 @@
         const save = h('button', { class: 'k-btn k-btn-primary', disabled: !can('P3K', ex ? 'U' : 'C') || null }, 'Simpan checklist');
         const evBox = h('div');
         pane.append(h('div', { class: 'k-form', style: { marginBottom: '10px' } }, h('label', { class: 'k-field' }, h('span', {}, 'Hari/tanggal pemeriksaan'), date), h('label', { class: 'k-field' }, h('span', {}, 'Diperiksa oleh'), by), h('label', { class: 'k-field' }, h('span', {}, 'Catatan'), note)),
-          h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix' }, h('thead', {}, h('tr', {}, ['No', 'Isi', 'Jumlah standar', 'Tersedia (✓)', 'Jumlah ada', 'Keterangan'].map(x => h('th', {}, x)))), tb)),
+          h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix k-mcard' }, h('thead', {}, h('tr', {}, ['No', 'Isi', 'Jumlah standar', 'Tersedia (✓)', 'Jumlah ada', 'Keterangan'].map(x => h('th', {}, x)))), tb)),
           h('div', { class: 'k-toolbar', style: { marginTop: '10px' } }, h('button', { class: 'k-btn', onclick: () => tb.querySelectorAll('tr').forEach(tr => { const it = items.find(x => x.no == tr.dataset.no); tr.querySelector('[data-f=available]').checked = true; const q = tr.querySelector('[data-f=qty]'); if (q.value === '') q.value = it.qty; }) }, 'Tandai semua lengkap'), save),
           h('div', { class: 'k-form-section' }, 'Foto kotak P3K'), evBox);
         if (ex) KEVID.widget(evBox, { unit: b.unit_id, domain: 'K3', module: 'P3K', entity: 'p3k_checks', entityId: ex.id, period: per });
@@ -335,7 +335,7 @@
       const save = h('button', { class: 'k-btn k-btn-primary', disabled: !editable || null }, 'Simpan area ' + area);
       const allFour = h('button', { class: 'k-btn', disabled: !editable || null, onclick: () => { KREF.PATROL_ITEMS.forEach(([no]) => { if (!(no in scores)) scores[no] = 4; }); show(area); } }, 'Isi sisa dengan 4');
       const evBox = h('div');
-      pane.append(h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix' }, h('thead', {}, h('tr', {}, ['No', 'Hal yang diperiksa / point dicek', 'Skor', 'Keterangan'].map(x => h('th', {}, x)))), tb)),
+      pane.append(h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix k-mcard' }, h('thead', {}, h('tr', {}, ['No', 'Hal yang diperiksa / point dicek', 'Skor', 'Keterangan'].map(x => h('th', {}, x)))), tb)),
         h('div', { class: 'k-toolbar', style: { marginTop: '10px' } }, total, h('label', { class: 'k-inline' }, 'Pemeriksa ', inspector), allFour, save), h('div', { class: 'k-form-section' }, 'Foto area ' + area), evBox);
       recalc();
       if (ex) KEVID.widget(evBox, { unit: s.unit_id, domain: 'K3', module: 'PATROL', entity: 'patrol_results', entityId: ex.id, period: s.date.slice(0, 7) });

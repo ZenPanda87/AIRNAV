@@ -268,6 +268,19 @@ window.KKS = (() => {
     $('#k-app').hidden = true; $('#k-login').hidden = false;
     if (msg) $('#k-login-msg').textContent = msg;
   }
+  /** Beri atribut data-label (judul kolom) pada sel tabel — dipakai tampilan kartu di HP. */
+  function labelTables(root = document) {
+    root.querySelectorAll('table.k-table:not([data-labeled]), table.k-mcard:not([data-labeled])').forEach(t => {
+      const heads = Array.from(t.querySelectorAll('thead tr:last-child th')).map(th => th.textContent.trim());
+      if (!heads.length) return;
+      t.querySelectorAll('tbody tr').forEach(tr => Array.from(tr.children).forEach((td, i) => { if (!td.hasAttribute('data-label')) td.setAttribute('data-label', heads[i] || ''); }));
+      t.setAttribute('data-labeled', '1');
+    });
+  }
+  let labelTimer = null;
+  new MutationObserver(() => { clearTimeout(labelTimer); labelTimer = setTimeout(() => labelTables(), 30); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+
   async function start() {
     $('#k-login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -280,6 +293,8 @@ window.KKS = (() => {
       finally { btn.disabled = false; }
     });
     $('#k-logout').addEventListener('click', async () => { await sb.auth.signOut(); state.user = null; showLogin('Anda sudah keluar.'); });
+    const backdrop = h('div', { id: 'k-backdrop', onclick: () => $('#k-sidebar').classList.remove('open') });
+    document.body.append(backdrop);
     $('#k-menu-btn').addEventListener('click', () => $('#k-sidebar').classList.toggle('open'));
     window.addEventListener('hashchange', renderRoute);
     const { data } = await sb.auth.getSession();
