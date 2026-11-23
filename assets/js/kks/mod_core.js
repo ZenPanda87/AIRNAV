@@ -245,7 +245,10 @@
       h('div', { class: 'k-panel' }, h('h3', {}, 'Penandatangan laporan PDF (label & jabatan)'), h('p', { class: 'k-help' }, 'Nama tidak dicetak — blok tanda tangan dibiarkan kosong untuk TTD basah (keputusan Q5).'), sigBox),
       h('div', { class: 'k-panel' }, h('h3', {}, `Target KPI Safety Rate klaster Tarakan ${y}`), h('div', { class: 'k-form' }, kpiInputs.map(([k, inp]) => h('label', { class: 'k-field' }, h('span', {}, KREF.KPI.find(x => x.key === k).name), inp)))),
       h('div', { class: 'k-panel' }, h('h3', {}, 'Isi tambahan kotak P3K (opsional, di luar 20 item standar)'), h('p', { class: 'k-help' }, 'Satu baris per item: nama;jumlah standar — mis. "Betadine;1"'), extra),
-      save);
+      save,
+      h('div', { class: 'k-panel', style: { marginTop: '16px' } }, h('h3', {}, 'Panduan interaktif (akun Anda)'),
+        h('p', { class: 'k-help' }, 'Panduan setiap halaman tampil otomatis sekali. Tekan tombol di bawah untuk menampilkannya lagi dari awal di semua halaman.'),
+        h('button', { class: 'k-btn', onclick: async () => { await KTour.reset(); toast('Semua panduan akan tampil lagi.', 'success'); KKS.go('dashboard'); } }, 'Ulangi semua panduan')));
     save.onclick = async () => {
       try {
         const s = {}; Array.from(sigBox.children).forEach(r => { s[r.dataset.key] = r.get(); });

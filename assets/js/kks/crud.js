@@ -14,7 +14,7 @@
       case 'datetime': return fmtDate(v, true);
       case 'bool': return v ? 'Ya' : 'Tidak';
       case 'money': return fmtRp(v);
-      case 'number': return fmtNum(v, f.dec || 0);
+      case 'number': return /year|tahun/i.test(f.k) ? String(v) : fmtNum(v, f.dec || 0);
       case 'multi': return Array.isArray(v) ? v.join(', ') : v;
       case 'select': { const o = (typeof f.opts === 'function' ? f.opts() : f.opts || []).find(o => (Array.isArray(o) ? o[0] : o) === v); return o ? (Array.isArray(o) ? o[1] : o) : v; }
       case 'rows': return Array.isArray(v) ? `${v.length} baris` : '';

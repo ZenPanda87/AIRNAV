@@ -209,6 +209,7 @@ window.KKS = (() => {
     $('#k-sidebar').classList.remove('open');
     try { await mod.render(body, params, $('#k-page-actions')); }
     catch (e) { console.error(e); body.append(h('div', { class: 'k-alert k-alert-danger' }, 'Gagal memuat: ' + friendly(e))); }
+    document.dispatchEvent(new CustomEvent('kks:route', { detail: { id: mod.id } }));
   }
   function buildNav() {
     const nav = $('#k-nav'); nav.innerHTML = '';
