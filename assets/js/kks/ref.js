@@ -115,7 +115,7 @@ window.KREF = {
   SEC_INCIDENT_KINDS: ['Pencurian', 'Sabotase', 'Gangguan KKB', 'Demo/unjuk rasa', 'Masuk area tidak sah', 'Ancaman bom/hoax', 'Barang mencurigakan', 'Pengrusakan fasilitas', 'Perilaku mencurigakan', 'Gangguan siber', 'Lainnya'],
   HHMD_ITEMS: ['Pembersihan unit', 'Supply voltage / baterai', 'Fungsi tombol / switch', 'Alert audible (suara)', 'Alert visual (lampu)', 'Uji deteksi benda logam uji', 'Kondisi fisik casing', 'Buku pemeliharaan & SOP tersedia'],
   ACTIVITY_KINDS: {
-    K3: ['Bulan K3', 'Simulasi APAR', 'Simulasi gempa / evakuasi', 'Simulasi ERP', 'Rapat Tim K3 / P2K3', 'Tinjauan Manajemen', 'Sosialisasi K3', 'Pencucian AC', 'Seminar kesehatan', 'Insiden', 'Kecelakaan kerja', 'Lainnya'],
+    K3: ['Bulan K3', 'Pelatihan P3K & APAR', 'Simulasi APAR', 'Emergency drill / table top', 'Simulasi gempa / evakuasi', 'Simulasi ERP', 'Rapat Tim K3 / P2K3', 'Tinjauan Manajemen', 'Sosialisasi K3', 'Pencucian AC', 'Seminar kesehatan', 'Insiden', 'Kecelakaan kerja', 'Lainnya'],
     KESELAMATAN: ['Safety promotion', 'Safety briefing', 'Safety campaign', 'Postflight report', 'PUTA / drone', 'Wildlife / layang-layang', 'Runway Safety Team', 'Investigasi internal', 'Lainnya'],
     KEAMANAN: ['DST (Duty Security Training)', 'Table Top Exercise', 'Security awareness', 'Rapat Komite Keamanan', 'Review ANSSP & SOP', 'Sosialisasi ANSSP & SOP', 'Patroli keamanan', 'Lainnya'],
     PENGAWASAN: ['Rapat bulanan', 'Inspeksi & monitoring ke unit', 'Lainnya']
