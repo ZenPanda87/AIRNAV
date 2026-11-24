@@ -113,20 +113,68 @@
   } });
 
   // ---------- Program kerja KKS ----------
-  /** Hitung realisasi otomatis dari data untuk kegiatan yang dikenali. Mengembalikan {bulan: jumlah}. */
+  // Rencana & realisasi disimpan sebagai { "bulan-minggu": true } (bulan 1–12, minggu 1–4).
+  const wkKey = (d) => { const dt = new Date(String(d).slice(0, 10) + 'T00:00'); return `${dt.getMonth() + 1}-${KKS.weekOfMonth(String(d).slice(0, 10))}`; };
+  /** Realisasi otomatis dari data → { "m-w": true } sesuai tanggal sebenarnya, atau null bila kegiatan tidak dikenali. */
   async function autoRealization(p) {
     const y = p.year, u = p.unit_id, a = p.activity.toLowerCase();
-    const months = (rows, col) => rows.reduce((o, r) => { const m = new Date(String(r[col]).slice(0, 10) + 'T00:00').getMonth() + 1; o[m] = (o[m] || 0) + 1; return o; }, {});
-    const between = (q, col) => q.eq('unit_id', u).gte(col, `${y}-01-01`).lte(col, `${y}-12-31`);
-    if (a.includes('apar')) { const r = check(await between(sb.from('apar_inspections').select('date'), 'date')); const m = months(r, 'date'); Object.keys(m).forEach(k => m[k] = 1); return m; }
-    if (a.includes('safety patrol') && p.field === 'K3') return months(check(await between(sb.from('patrol_schedules').select('date').eq('status', 'SELESAI'), 'date')), 'date');
-    if (a.includes('safety action group') || a.includes('sag')) return months(check(await between(sb.from('sag_meetings').select('date'), 'date')), 'date');
-    if (a.includes('test keamanan')) return months(check(await between(sb.from('sec_activities').select('date').eq('kind', 'TEST'), 'date')), 'date');
-    if (a.includes('audit keamanan')) return months(check(await between(sb.from('sec_activities').select('date').eq('kind', 'AUDIT'), 'date')), 'date');
-    if (a.includes('inspeksi keamanan')) return months(check(await between(sb.from('sec_activities').select('date').eq('kind', 'INSPEKSI'), 'date')), 'date');
-    const kw = a.includes('bulan k3') ? 'Bulan K3' : a.includes('rapat triwulan') ? 'Rapat' : a.includes('dst') ? 'DST' : a.includes('table top') ? 'Table Top' : a.includes('tinjauan') ? 'Tinjauan' : null;
-    if (kw) return months(check(await between(sb.from('activities').select('date').ilike('kind', `%${kw}%`), 'date')), 'date');
+    const between = (q, col) => q.eq('unit_id', u).gte(col, `${y}-01-01`).lte(col, `${y}-12-31T23:59:59`);
+    const keys = (rows, col) => Object.fromEntries(rows.map(r => [wkKey(r[col]), true]));
+    const act = async (re, domain) => { let q = between(sb.from('activities').select('date,kind,title'), 'date'); if (domain) q = q.eq('domain', domain); return keys(check(await q).filter(r => re.test(`${r.kind} ${r.title}`)), 'date'); };
+    if (a.includes('pelatihan')) return act(/simulasi apar|pelatihan|p3k/i, 'K3');
+    if (a.includes('apar')) return keys(check(await between(sb.from('apar_inspections').select('date'), 'date')), 'date');
+    if (a.includes('safety patrol')) return keys(check(await between(sb.from('patrol_schedules').select('date').eq('status', 'SELESAI'), 'date')), 'date');
+    if (a.includes('safety action group') || /\bsag\b/.test(a)) return keys(check(await between(sb.from('sag_meetings').select('date'), 'date')), 'date');
+    if (a.includes('test keamanan')) return keys(check(await between(sb.from('sec_activities').select('date').eq('kind', 'TEST'), 'date')), 'date');
+    if (a.includes('audit keamanan')) return keys(check(await between(sb.from('sec_activities').select('date').eq('kind', 'AUDIT'), 'date')), 'date');
+    if (a.includes('inspeksi keamanan')) return keys(check(await between(sb.from('sec_activities').select('date').eq('kind', 'INSPEKSI'), 'date')), 'date');
+    if (a.includes('evaluasi') && a.includes('effort')) return keys(check(await between(sb.from('occurrences').select('created_at').eq('source', 'EFFORT'), 'created_at')), 'created_at');
+    if (a.includes('audit, monitoring')) return keys(check(await between(sb.from('oversight_events').select('start_date'), 'start_date')).filter(r => r.start_date), 'start_date');
+    if (a.includes('dst') || a.includes('duty')) return act(/DST|duty/i);
+    if (a.includes('rapat triwulan')) return act(/rapat tim k3|p2k3/i, 'K3');
+    if (a.includes('emergency') || a.includes('table top')) return act(/simulasi|erp|emergency|table top|drill/i);
+    if (a.includes('pelatihan p3k')) return act(/simulasi apar|pelatihan|p3k/i, 'K3');
+    if (a.includes('tinjauan')) return act(/tinjauan/i);
+    if (a.includes('review anssp')) return act(/review anssp/i);
+    if (a.includes('sosialisasi') && a.includes('anssp')) return act(/sosialisasi anssp/i);
+    if (a.includes('safety campaign')) return act(/campaign|kampanye/i);
+    if (a.includes('inspeksi & monitoring ke unit')) return act(/monitoring ke unit|inspeksi & monitoring/i);
+    if (a.includes('bulan k3')) return act(/bulan k3/i);
     return null;
+  }
+  /** Jumlah "kegiatan" = blok minggu berurutan (mis. Review dokumen 8 minggu = 1 kegiatan). Rentang bulan opsional. */
+  function blocks(obj, m1 = 1, m2 = 12) {
+    let n = 0, prev = false;
+    for (let m = m1; m <= m2; m++) for (let w = 1; w <= 4; w++) { const on = !!(obj || {})[`${m}-${w}`]; if (on && !prev) n++; prev = on; }
+    return n;
+  }
+  /** Capaian rencana dalam rentang: blok rencana yang punya realisasi pada minggu blok itu atau bulan yang sama. */
+  function achieved(p, m1 = 1, m2 = 12) {
+    const plan = p.plan || {}, real = p.realization || {};
+    const runs = []; let cur = null;
+    for (let m = m1; m <= m2; m++) for (let w = 1; w <= 4; w++) { const k = `${m}-${w}`; if (plan[k]) { if (!cur) { cur = []; runs.push(cur); } cur.push([m, w]); } else cur = null; }
+    const isDone = (run) => run.some(([m]) => [1, 2, 3, 4].some(w => real[`${m}-${w}`]));
+    const done = runs.filter(isDone).length;
+    // rencana yang belum jatuh tempo (minggu awalnya setelah hari ini) & belum terlaksana
+    const now = new Date(), cy = now.getFullYear(), cm = now.getMonth() + 1, cw = KKS.weekOfMonth(KKS.today());
+    const future = p.year > cy ? runs.filter(r => !isDone(r)).length : p.year < cy ? 0
+      : runs.filter(run => !isDone(run) && (run[0][0] > cm || (run[0][0] === cm && run[0][1] > cw))).length;
+    const realBlocks = blocks(real, m1, m2);
+    return { plan: runs.length, done, future, due: runs.length - future, real: realBlocks, extra: Math.max(0, realBlocks - done) };
+  }
+  async function refreshAuto(rows) {
+    let n = 0;
+    for (const p of rows) {
+      if (!can('PROKER', 'U', p.unit_id)) continue;
+      const r = await autoRealization(p).catch(() => null);
+      if (!r) continue;
+      const merged = { ...(p.realization || {}), ...r };
+      if (Object.keys(merged).length !== Object.keys(p.realization || {}).length) {
+        check(await sb.from('work_programs').update({ realization: merged }).eq('id', p.id));
+        p.realization = merged; n++;
+      }
+    }
+    return n;
   }
   function planEditor(p, reload) {
     const plan = { ...(p.plan || {}) }; const real = { ...(p.realization || {}) };
@@ -136,44 +184,105 @@
       tb.innerHTML = '';
       [['Rencana', plan], ['Realisasi', real]].forEach(([lab, obj]) => tb.append(h('tr', {}, h('th', {}, lab), ...Array.from({ length: 12 }, (_, i) => i + 1).flatMap(m => [1, 2, 3, 4].map(w => {
         const k = `${m}-${w}`;
-        return h('td', { class: 'c' }, h('input', { type: 'checkbox', checked: obj[k] || null, disabled: !editable || null, onchange: (e) => { if (e.target.checked) obj[k] = true; else delete obj[k]; } }));
+        return h('td', { class: 'c', style: lab === 'Rencana' && plan[k] ? { background: '#bfdbfe' } : (lab === 'Realisasi' && real[k] ? { background: '#bbf7d0' } : null) },
+          h('input', { type: 'checkbox', checked: obj[k] || null, disabled: !editable || null, onchange: (e) => { if (e.target.checked) obj[k] = true; else delete obj[k]; draw(); } }));
       })))));
     };
     draw();
     const save = h('button', { class: 'k-btn k-btn-primary', disabled: !editable || null }, 'Simpan');
     const auto = h('button', { class: 'k-btn', disabled: !editable || null }, '⚡ Hitung realisasi dari data');
-    const m = modal({ title: `${p.activity} — ${p.year}`, wide: true, body: h('div', {}, h('p', { class: 'k-help' }, `Frekuensi ${p.frequency}×/tahun · centang minggu rencana & realisasi.`),
+    const m = modal({ title: `${p.activity} — ${p.year}`, wide: true, body: h('div', {}, h('p', { class: 'k-help' }, `Frekuensi ${p.frequency}×/tahun · biru = minggu rencana, hijau = minggu terlaksana. Centang untuk mengubah.`),
       h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix' }, h('thead', {}, h('tr', {}, h('th', {}), BULAN.map(b => h('th', { colspan: 4 }, b.slice(0, 3)))), h('tr', {}, h('th', {}), Array.from({ length: 12 }).flatMap(() => [1, 2, 3, 4].map(w => h('th', {}, w))))), tb))),
       footer: [auto, h('button', { class: 'k-btn', onclick: () => m.close() }, 'Tutup'), save] });
     auto.onclick = async () => {
       const r = await autoRealization(p);
       if (!r) return toast('Kegiatan ini belum dapat dihitung otomatis — centang manual.', 'warning');
-      Object.entries(r).forEach(([mm]) => { if (![1, 2, 3, 4].some(w => real[`${mm}-${w}`])) { const w = [1, 2, 3, 4].find(w => plan[`${mm}-${w}`]) || 1; real[`${mm}-${w}`] = true; } });
-      draw(); toast(`Realisasi ditemukan di ${Object.keys(r).length} bulan.`, 'success');
+      Object.assign(real, r); draw();
+      toast(`Realisasi dari data: ${Object.keys(r).length} minggu.`, 'success');
     };
     save.onclick = async () => { try { check(await sb.from('work_programs').update({ plan, realization: real }).eq('id', p.id)); toast('Tersimpan.', 'success'); m.close(); reload(); } catch (e) { toast(e.message, 'error'); } };
   }
-  const count = (o) => Object.keys(o || {}).length;
+
+  /** Laporan triwulan realisasi timeline program kerja (format mengikuti Program Kerja Unit KKS TRK 2026.xlsx). */
+  function quarterReport(rows, year, reload) {
+    const q0 = Math.floor(new Date().getMonth() / 3) + 1;
+    const qSel = h('select', { class: 'k-input' }, [1, 2, 3, 4].map(q => h('option', { value: q, selected: q === (year == new Date().getFullYear() ? q0 : 4) || null }, `Triwulan ${ROMAWI_TW[q - 1]}`)));
+    const autoCb = h('input', { type: 'checkbox', checked: can('PROKER', 'U') || null, disabled: !can('PROKER', 'U') || null });
+    const go = h('button', { class: 'k-btn k-btn-primary' }, 'Cetak / PDF');
+    const m = modal({ title: `Laporan triwulan program kerja ${year}`, body: h('div', { class: 'k-form' },
+      h('label', { class: 'k-field' }, h('span', {}, 'Triwulan'), qSel),
+      h('label', { class: 'k-check span-full' }, autoCb, ' Perbarui realisasi otomatis dari data sebelum mencetak'),
+      h('p', { class: 'k-help span-full' }, 'Realisasi otomatis diambil dari pemeriksaan APAR, safety patrol, SAG, testing/audit/inspeksi keamanan, impor EFFORT, kegiatan pengawasan & kegiatan K3/keamanan yang tercatat. Kegiatan lain dicentang manual lewat tombol "Jadwal".')),
+      footer: [h('button', { class: 'k-btn', onclick: () => m.close() }, 'Batal'), go] });
+    go.onclick = async () => {
+      go.disabled = true;
+      try {
+        if (autoCb.checked) { const n = await refreshAuto(rows); if (n) toast(`${n} kegiatan diperbarui realisasinya.`, 'info'); }
+        const q = +qSel.value, m1 = (q - 1) * 3 + 1, m2 = m1 + 2, ms = [m1, m1 + 1, m2];
+        m.close(); printQuarter(rows, year, q, m1, m2, ms); reload();
+      } catch (e) { toast(e.message, 'error'); go.disabled = false; }
+    };
+  }
+  const ROMAWI_TW = ['I', 'II', 'III', 'IV'];
+  function printQuarter(rows, year, q, m1, m2, ms) {
+    const PB = { background: '#bfdbfe' }, DONE = { background: '#86efac' };
+    let lastField = ''; let no = 0; const trs = []; let tPlan = 0, tDone = 0, tExtra = 0, tFut = 0;
+    rows.forEach(r => {
+      if (r.field !== lastField) { trs.push(h('tr', {}, h('td', { colspan: 21 }, h('b', {}, fieldTitle(r.field))))); lastField = r.field; no = 0; }
+      const a = achieved(r, m1, m2); tPlan += a.plan; tDone += a.done; tExtra += a.extra; tFut += a.future;
+      const tent = !Object.keys(r.plan || {}).length;
+      const status = tent ? (a.real ? `Terlaksana ${a.real}× (tentatif)` : 'Tentatif — belum ada kegiatan') :
+        !a.plan ? (a.real ? `Terlaksana ${a.real}× di luar rencana` : 'Tidak direncanakan di TW ini') :
+        a.done >= a.plan ? 'Terlaksana' + (a.extra ? ` (+${a.extra} di luar rencana)` : '') : (a.done >= a.due && a.future) ? (a.done ? `Sesuai jadwal (${a.done}/${a.plan}), ${a.future} terjadwal` : 'Terjadwal — belum jatuh tempo') : a.done ? `Sebagian (${a.done}/${a.due} jatuh tempo)` + (a.future ? `, ${a.future} terjadwal` : '') : 'Belum terlaksana' + (a.future ? `, ${a.future} terjadwal` : '');
+      trs.push(h('tr', {}, h('td', { class: 'num' }, ++no), h('td', {}, r.activity), h('td', { class: 'center' }, r.frequency),
+        ...ms.flatMap(m => [1, 2, 3, 4].map(w => { const k = `${m}-${w}`, p = (r.plan || {})[k], d = (r.realization || {})[k]; return h('td', { class: 'center', style: d ? DONE : (p ? PB : null) }, d ? '√' : ''); })),
+        h('td', { class: 'center' }, tent ? 'tentatif' : a.plan), h('td', { class: 'center' }, a.done + a.extra), h('td', { class: 'center' }, a.due ? Math.round(Math.min(a.done, a.due) / a.due * 100) + '%' : '-'),
+        h('td', {}, status + (r.note ? ` · ${r.note}` : ''))));
+    });
+    const head = [h('tr', {}, h('th', { rowspan: 2 }, 'No'), h('th', { rowspan: 2 }, 'Kegiatan'), h('th', { rowspan: 2 }, 'Frek./ thn'), ms.map(m => h('th', { colspan: 4 }, BULAN[m - 1].toUpperCase())),
+      h('th', { rowspan: 2 }, 'Rencana TW'), h('th', { rowspan: 2 }, 'Realisasi'), h('th', { rowspan: 2 }, 'Capaian'), h('th', { rowspan: 2 }, 'Keterangan')),
+      h('tr', {}, ms.flatMap(() => [1, 2, 3, 4].map(w => h('th', {}, w))))];
+    const tDue = tPlan - tFut; const pct = tDue ? Math.round(Math.min(tDone, tDue) / tDue * 100) : 0; const todayStr = KKS.today(); const endStr = q === 4 ? `${year + 1}-01-05` : `${year}-${KKS.pad(m2 + 1)}-05`;
+    const ringkas = h('table', { class: 'p-kv' }, ...[['Kegiatan direncanakan di TW ini', `${tPlan} kegiatan`], ['Terlaksana sesuai rencana', `${tDone} kegiatan`], ['Terlaksana di luar rencana', `${tExtra} kegiatan`], ...(tFut ? [['Terjadwal (belum jatuh tempo)', `${tFut} kegiatan`]] : []), [tFut ? 'Capaian s.d. tanggal cetak' : 'Capaian triwulan', `${pct}% (${Math.min(tDone, tDue)}/${tDue} kegiatan jatuh tempo)`]].map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, ': ' + v))));
+    const late = rows.filter(r => { const a = achieved(r, m1, m2); return a.due && a.done < a.due; }).map(r => r.activity);
+    KPRINT.doc({ title: `LAPORAN REALISASI PROGRAM KERJA UNIT KKS TRIWULAN ${ROMAWI_TW[q - 1]} TAHUN ${year}`, landscape: true, sig: 'PENGAWASAN',
+      date: todayStr < endStr ? todayStr : endStr,
+      body: [ringkas, h('table', { class: 'p-table small' }, h('thead', {}, head), h('tbody', {}, trs)),
+        h('p', {}, 'Keterangan warna: biru = minggu rencana; hijau/√ = minggu terlaksana. Capaian = kegiatan rencana yang terlaksana ÷ kegiatan rencana yang sudah jatuh tempo; kegiatan terjadwal setelah tanggal cetak belum dihitung.'),
+        late.length ? h('p', {}, h('b', {}, 'Belum/sebagian terlaksana: '), late.join('; ') + '. Mohon dijadwalkan ulang / diberi justifikasi.') : h('p', {}, 'Seluruh kegiatan yang direncanakan pada triwulan ini telah terlaksana.')] });
+  }
+  const fieldTitle = (f) => ({ K3: '1. KESELAMATAN K3', Keamanan: '2. KEAMANAN PENERBANGAN', Standardisasi: '3. STANDARDISASI' }[f] || f.toUpperCase());
+
   KKS.register({ id: 'proker', title: 'Program kerja KKS', domain: 'PENGAWASAN', icon: '🗓️', perm: 'PROKER', order: 33, render: KCRUD.page({
-    id: 'proker', title: 'Program kerja Unit KKS', table: 'work_programs', perm: 'PROKER', domain: 'PENGAWASAN', itemName: 'program kerja', order: ['field', true, 'activity', true],
+    id: 'proker', title: 'Program kerja Unit KKS', table: 'work_programs', perm: 'PROKER', domain: 'PENGAWASAN', itemName: 'program kerja', order: ['sort', true, 'field', true],
     filters: { year: true, yearCol: 'year' },
-    intro: 'Rencana per minggu (12 bulan × 4 minggu) dan realisasi. Realisasi APAR, safety patrol, SAG, testing/audit/inspeksi keamanan, Bulan K3, rapat tim K3, DST & table top dapat dihitung otomatis dari data.',
+    intro: 'Sumber 2026: "Program Kerja Unit KKS TRK 2026.xlsx" (19 kegiatan, TTD MKKS 06-01-2026). Rencana per minggu (12 bulan × 4 minggu) & realisasi; realisasi dapat dihitung otomatis dari data. "Laporan triwulan" mencetak timeline rencana vs realisasi + capaian per TW.',
     fields: [
       { k: 'year', l: 'Tahun', t: 'number', req: true, def: new Date().getFullYear(), list: true }, { k: 'field', l: 'Bidang', t: 'list', opts: ['K3', 'Keamanan', 'Standardisasi', 'Keselamatan'], req: true, list: true },
       { k: 'activity', l: 'Kegiatan', req: true, list: true, span: 2, cls: 'wrap' }, { k: 'frequency', l: 'Frekuensi / tahun', t: 'number', def: 1, list: true },
-      { k: '_plan', l: 'Rencana (minggu)', form: false, list: true, render: r => count(r.plan) }, { k: '_real', l: 'Realisasi (minggu)', form: false, list: true, render: r => count(r.realization) },
-      { k: '_pct', l: 'Capaian', form: false, list: true, render: r => { const p = count(r.plan) || r.frequency || 1; const pc = Math.min(100, Math.round(count(r.realization) / p * 100)); return h('div', {}, h('div', { class: 'bar' }, h('i', { style: { width: pc + '%' } })), h('small', {}, pc + '%')); } },
+      { k: 'sort', l: 'Urutan', t: 'number', def: 99 },
+      { k: '_plan', l: 'Rencana (kegiatan)', form: false, list: true, render: r => Object.keys(r.plan || {}).length ? blocks(r.plan) : 'tentatif' },
+      { k: '_real', l: 'Realisasi', form: false, list: true, render: r => blocks(r.realization) },
+      { k: '_pct', l: 'Capaian s.d. bulan ini', form: false, list: true, render: r => { const mm = r.year < new Date().getFullYear() ? 12 : new Date().getMonth() + 1; const a = achieved(r, 1, mm); if (!a.due) return h('small', { class: 'k-help' }, a.real ? `${a.real}× terlaksana` : (a.future ? 'terjadwal' : '-')); const d = Math.min(a.done, a.due); const pc = Math.round(d / a.due * 100); return h('div', {}, h('div', { class: 'bar' }, h('i', { style: { width: pc + '%', background: pc < 100 ? '#f97316' : null } })), h('small', {}, `${d}/${a.due} · ${pc}%`)); } },
       { k: 'note', l: 'Keterangan', t: 'textarea', list: true, cls: 'wrap' }
     ],
     rowActions: [{ label: 'Jadwal', run: (r, rl) => planEditor(r, rl) }],
-    headerActions: [{ label: 'Cetak program kerja', run: ({ rows, st }) => {
-      const head = [h('tr', {}, h('th', { rowspan: 2 }, 'No'), h('th', { rowspan: 2 }, 'Bidang'), h('th', { rowspan: 2 }, 'Kegiatan'), h('th', { rowspan: 2 }, 'Frek.'), BULAN.map(b => h('th', { colspan: 4 }, b.slice(0, 3).toUpperCase())), h('th', { rowspan: 2 }, 'Ket.')),
-        h('tr', {}, Array.from({ length: 12 }).flatMap(() => [1, 2, 3, 4].map(w => h('th', {}, w))))];
-      const body = h('table', { class: 'p-table small' }, h('thead', {}, head), h('tbody', {}, rows().map((r, i) => h('tr', {}, h('td', { class: 'num' }, i + 1), h('td', {}, r.field), h('td', {}, r.activity), h('td', { class: 'center' }, r.frequency),
-        ...Array.from({ length: 12 }, (_, m) => m + 1).flatMap(m => [1, 2, 3, 4].map(w => { const k = `${m}-${w}`; const p = (r.plan || {})[k], d = (r.realization || {})[k]; return h('td', { class: 'center', style: p ? { background: d ? '#86efac' : '#bfdbfe' } : (d ? { background: '#86efac' } : null) }, d ? '√' : ''); })), h('td', {}, r.note || '')))));
-      KPRINT.doc({ title: 'PROGRAM KERJA UNIT KESELAMATAN, KEAMANAN DAN STANDARDISASI', period: 'Tahun ' + (st.year || ''), landscape: true, sig: [['Dibuat Oleh,', 'Manager KKS']], body: [body, h('p', {}, 'Biru = rencana; hijau/√ = terealisasi.')] });
-    } }]
+    headerActions: [
+      { label: '📊 Laporan triwulan', run: ({ rows, st, reload }) => { if (!rows().length) return toast('Belum ada program kerja pada tahun ini.', 'warning'); quarterReport(rows(), Number(st.year) || new Date().getFullYear(), reload); } },
+      { label: 'Cetak program kerja', run: ({ rows, st }) => {
+        const head = [h('tr', {}, h('th', { rowspan: 2 }, 'No'), h('th', { rowspan: 2 }, 'Kegiatan'), h('th', { rowspan: 2 }, 'Frek.'), BULAN.map(b => h('th', { colspan: 4 }, b.slice(0, 3).toUpperCase())), h('th', { rowspan: 2 }, 'Ket.')),
+          h('tr', {}, Array.from({ length: 12 }).flatMap(() => [1, 2, 3, 4].map(w => h('th', {}, w))))];
+        let lastField = '', no = 0; const trs = [];
+        rows().forEach(r => {
+          if (r.field !== lastField) { trs.push(h('tr', {}, h('td', { colspan: 52 }, h('b', {}, fieldTitle(r.field))))); lastField = r.field; no = 0; }
+          trs.push(h('tr', {}, h('td', { class: 'num' }, ++no), h('td', {}, r.activity), h('td', { class: 'center' }, r.frequency),
+            ...Array.from({ length: 12 }, (_, m) => m + 1).flatMap(m => [1, 2, 3, 4].map(w => { const k = `${m}-${w}`; const p = (r.plan || {})[k], d = (r.realization || {})[k]; return h('td', { class: 'center', style: d ? { background: '#86efac' } : (p ? { background: '#bfdbfe' } : null) }, d ? '√' : ''); })), h('td', {}, r.note || '')));
+        });
+        KPRINT.doc({ title: 'PROGRAM KERJA UNIT KESELAMATAN, KEAMANAN DAN STANDARDISASI', period: 'Tahun ' + (st.year || ''), landscape: true, sig: [['', 'Manager Keselamatan, Keamanan dan Standardisasi']],
+          body: [h('table', { class: 'p-table small' }, h('thead', {}, head), h('tbody', {}, trs)), h('p', {}, 'Biru = rencana; hijau/√ = terealisasi.')] });
+      } }]
   }) });
+
 
   KKS.register({ id: 'kegiatan-pengawasan', title: 'Rapat & monitoring', domain: 'PENGAWASAN', icon: '🗒️', perm: 'KEGIATAN', order: 34, render: KMOD.activities('PENGAWASAN', 'Rapat bulanan & monitoring unit') });
 })();

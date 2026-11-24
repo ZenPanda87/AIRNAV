@@ -49,7 +49,7 @@
     pengawasan: [head('Kegiatan pengawasan', 'Audit/inspeksi/monitoring dari DNP, KOBU VII, Dirkampen, SPI & internal.'), add('Catat kegiatan: penyelenggara, jenis, judul, tanggal, lokasi yang diperiksa. Laporan hasil diunggah sebagai evidence.'), actions('"Temuan" membuka daftar temuan kegiatan tsb.')],
     temuan: [head('Temuan & CAP', 'Siklus OPEN → IN PROGRESS → PROPOSED CLOSED → CLOSED. OVERDUE otomatis bila lewat target.'), add('Catat temuan per PQ: referensi, temuan, risk index, CAP, PIC, target.'), toolbar('Saring status (mis. OVERDUE) untuk fokus pada yang terlambat.'), actions('Progres (perbarui %), Perpanjang (target baru + justifikasi), Usul close, Close (Admin), Riwayat. Evidence lewat "Ubah".'), btn('Cetak Matriks', 'Matriks progres', 'Format Matriks Progres Pemenuhan Tindak Lanjut untuk pusat/regulator.', '#k-page-actions')],
     'temuan-dashboard': [head('Dashboard temuan', 'Rekap status temuan per lokasi & per bidang.'), { sel: '.k-cards', title: 'Status', text: 'Jumlah OPEN, IN PROGRESS, PROPOSED CLOSED, OVERDUE, CLOSED.' }],
-    proker: [head('Program kerja KKS', 'Rencana & realisasi kegiatan tahunan per minggu.'), add('Tambah kegiatan, bidang & frekuensi.'), actions('"Jadwal" membuka grid 12 bulan × 4 minggu: centang rencana & realisasi, atau "Hitung realisasi dari data".'), btn('Cetak program', 'Cetak', 'Program kerja lanskap: biru = rencana, hijau = terealisasi.', '#k-page-actions')],
+    proker: [head('Program kerja KKS', 'Rencana & realisasi kegiatan tahunan per minggu.'), add('Tambah kegiatan, bidang & frekuensi.'), actions('"Jadwal" membuka grid 12 bulan × 4 minggu: centang rencana & realisasi, atau "Hitung realisasi dari data".'), btn('Laporan triwulan', 'Laporan triwulan', 'Pilih TW → realisasi diperbarui otomatis dari data → cetak timeline rencana vs realisasi, capaian % dan daftar kegiatan yang belum terlaksana.', '#k-page-actions'), btn('Cetak program', 'Cetak', 'Program kerja lanskap: biru = rencana, hijau = terealisasi.', '#k-page-actions')],
     'kegiatan-pengawasan': [head('Rapat & monitoring', 'Rapat bulanan, inspeksi & monitoring ke unit.'), add('Catat kegiatan & hasilnya.')],
 
     traffic: [head('Traffic bulanan', 'Rekap DEP/ARR/OVF domestik & internasional per lokasi — dasar perhitungan KPI.'), btn('Impor LAP', 'Impor LAP. DATA OPERASI', 'Unggah file Excel dari Unit Operasi; tiap sheet lokasi dihitung otomatis, tampil pratinjau sebelum disimpan.', '#k-page-actions'), add('Atau isi/koreksi rekap secara manual.', 'Tambah manual'), btn('Cetak rekap', 'Rekap tahunan', 'Rekapitulasi traffic movement 12 bulan per lokasi & klaster.', '#k-page-actions')],
@@ -85,6 +85,7 @@
 
   /** Fitur baru — tambahkan entri di sini setiap rilis (id unik, page = id modul atau '*'). */
   const FEATURES = [
+    { id: '2026-11-proker-tw', page: 'proker', el: () => Array.from(document.querySelectorAll('#k-page-actions button')).find(b => b.textContent.includes('Laporan triwulan')), title: 'Laporan triwulan program kerja', text: 'Cetak timeline rencana vs realisasi program kerja per triwulan lengkap dengan capaian %. Program kerja 2026 kini sesuai file resmi "Program Kerja Unit KKS TRK 2026.xlsx".' },
     { id: '2026-11-mobile', page: 'dashboard', sel: '#k-help', title: 'Tampilan HP & panduan baru', text: 'Daftar data kini tampil sebagai kartu di HP, dan setiap halaman punya panduan interaktif. Ketuk ❓ untuk memutar ulang.' }
   ];
 
@@ -123,7 +124,7 @@
         if (how === 'off') return;
       }
       await pageTour(id);
-      for (const f of FEATURES.filter(f => f.page === id || f.page === '*')) { await waitFor(f.sel, 1500); await KTour.feature(f); }
+      for (const f of FEATURES.filter(f => f.page === id || f.page === '*')) { await waitFor(f.el || f.sel, 1500); await KTour.feature(f); }
     } finally { running = false; }
   }
   document.addEventListener('kks:route', (e) => onRoute(e.detail.id));
