@@ -207,13 +207,13 @@
     presets: () => ({ category: 'Obat', track_expiry: true, sort: 50 }),
     rowClass: r => r.active ? '' : 'row-warn',
     fields: [
-      { k: 'sort', l: 'No. urut', t: 'number', def: 50, list: true, help: 'Urutan di form checklist' },
+      { k: 'sort', l: 'No. urut', t: 'number', def: 50, list: true, cls: 'center', help: 'Urutan di form checklist' },
       { k: 'name', l: 'Nama isi / obat', req: true, list: true, span: 2, cls: 'wrap', ph: 'mis. Betadine 30 ml, Paracetamol 500 mg' },
-      { k: 'category', l: 'Kategori', t: 'select', opts: ['Standar', 'Obat', 'Tambahan'], def: 'Obat', list: true, render: r => KUI.badge(r.category, P3K_CAT[r.category]) },
-      { k: 'std_qty', l: 'Jumlah standar per kotak', t: 'number', min: 0, req: true, def: 1, list: true, help: 'Sesuaikan dengan jumlah yang dibeli / ditetapkan' },
-      { k: 'uom', l: 'Satuan', t: 'list', opts: ['buah', 'botol', 'bungkus', 'gulung', 'lembar', 'pasang', 'strip', 'tablet', 'tube', 'sachet', 'pcs'], list: true },
-      { k: 'track_expiry', l: 'Pantau kedaluwarsa', t: 'bool', boolLabel: 'Ya, tanyakan tanggal kedaluwarsa saat checklist', list: true },
-      { k: 'active', l: 'Dipakai', t: 'bool', def: true, boolLabel: 'Aktif di checklist', list: true, render: r => r.active ? KUI.badge('Aktif', 'ok') : KUI.badge('Nonaktif') },
+      { k: 'category', l: 'Kategori', t: 'select', opts: ['Standar', 'Obat', 'Tambahan'], def: 'Obat', list: true, cls: 'center', render: r => KUI.badge(r.category, P3K_CAT[r.category]) },
+      { k: 'std_qty', l: 'Jumlah standar per kotak', t: 'number', min: 0, req: true, def: 1, list: true, cls: 'center', help: 'Sesuaikan dengan jumlah yang dibeli / ditetapkan' },
+      { k: 'uom', l: 'Satuan', cls: 'center', t: 'list', opts: ['buah', 'botol', 'bungkus', 'gulung', 'lembar', 'pasang', 'strip', 'tablet', 'tube', 'sachet', 'pcs'], list: true },
+      { k: 'track_expiry', l: 'Pantau kedaluwarsa', t: 'bool', boolLabel: 'Ya, tanyakan tanggal kedaluwarsa saat checklist', list: true, cls: 'center', render: r => r.track_expiry ? KUI.badge('Ya', 'info') : h('span', { class: 'k-help' }, '—') },
+      { k: 'active', l: 'Dipakai', t: 'bool', def: true, boolLabel: 'Aktif di checklist', list: true, cls: 'center', render: r => r.active ? KUI.badge('Aktif', 'ok') : KUI.badge('Nonaktif') },
       { k: 'note', l: 'Keterangan', t: 'textarea', list: true, cls: 'wrap' }
     ],
     headerActions: [{ label: '⧉ Salin daftar dari lokasi lain', perm: 'C', run: async ({ reload }) => {

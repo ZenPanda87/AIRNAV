@@ -273,7 +273,7 @@
           tb.append(tr);
         });
         tableBox.append(h('table', { class: 'k-table' },
-          h('thead', {}, h('tr', {}, h('th', { class: 'num' }, 'No'), fl.map(f => h('th', {}, f.l)), h('th', {}, 'Aksi'))), tb));
+          h('thead', {}, h('tr', {}, h('th', { class: 'num' }, 'No'), fl.map(f => h('th', { class: /\bcenter\b/.test(f.cls || '') ? 'center' : null }, f.l)), h('th', {}, 'Aksi'))), tb));
         info.textContent = `${rows.length} data` + (rows.length !== st.rows.length ? ` (dari ${st.rows.length})` : '');
       }
       async function del(r) {
