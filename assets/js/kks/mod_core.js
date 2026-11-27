@@ -225,7 +225,6 @@
     const editable = can('MASTER', 'U', null);
     const sig = JSON.parse(JSON.stringify(KKS.setting('signatories', {})));
     const kpi = JSON.parse(JSON.stringify(KKS.setting('kpi_targets', {})));
-    const p3kExtra = KKS.setting('p3k_extra_items', []);
     const LABEL = { default: 'Default', K3: 'Laporan K3 (APAR, P3K, patrol, APD, pengukuran)', SMK3: 'Evaluasi SMK3 triwulan', HIRADC: 'HIRADC K3', JSA: 'JSA', WP: 'Surat Izin Kerja', KESELAMATAN: 'Laporan keselamatan / KPI / SAG', KEAMANAN: 'Laporan keamanan (logbook, HHMD)', BA: 'Berita Acara keamanan', PENGAWASAN: 'Matriks tindak lanjut temuan' };
     const sigBox = h('div');
     Object.keys(KREF.SIGNATORIES).forEach(key => {
@@ -239,12 +238,11 @@
     const y = new Date().getFullYear();
     const kpiYear = kpi[y] || {};
     const kpiInputs = KREF.KPI.filter(k => k.target !== null).map(k => [k.key, h('input', { class: 'k-input', type: 'number', step: 'any', value: kpiYear[k.key] ?? k.target })]);
-    const extra = h('textarea', { class: 'k-input', rows: 4 }, p3kExtra.map(x => `${x.name};${x.qty}`).join('\n'));
     const save = h('button', { class: 'k-btn k-btn-primary', disabled: !editable || null }, 'Simpan pengaturan');
     c.append(
       h('div', { class: 'k-panel' }, h('h3', {}, 'Penandatangan laporan PDF (label & jabatan)'), h('p', { class: 'k-help' }, 'Nama tidak dicetak — blok tanda tangan dibiarkan kosong untuk TTD basah (keputusan Q5).'), sigBox),
       h('div', { class: 'k-panel' }, h('h3', {}, `Target KPI Safety Rate klaster Tarakan ${y}`), h('div', { class: 'k-form' }, kpiInputs.map(([k, inp]) => h('label', { class: 'k-field' }, h('span', {}, KREF.KPI.find(x => x.key === k).name), inp)))),
-      h('div', { class: 'k-panel' }, h('h3', {}, 'Isi tambahan kotak P3K (opsional, di luar 20 item standar)'), h('p', { class: 'k-help' }, 'Satu baris per item: nama;jumlah standar — mis. "Betadine;1"'), extra),
+      h('div', { class: 'k-panel' }, h('h3', {}, 'Isi & obat kotak P3K'), h('p', { class: 'k-help' }, 'Jumlah standar dan obat/item tambahan kini diatur per lokasi di menu K3 → ', h('a', { href: '#/p3k-isi' }, 'Isi standar kotak P3K'), '.')),
       save,
       h('div', { class: 'k-panel', style: { marginTop: '16px' } }, h('h3', {}, 'Panduan interaktif (akun Anda)'),
         h('p', { class: 'k-help' }, 'Panduan setiap halaman tampil otomatis sekali. Tekan tombol di bawah untuk menampilkannya lagi dari awal di semua halaman.'),
@@ -253,8 +251,7 @@
       try {
         const s = {}; Array.from(sigBox.children).forEach(r => { s[r.dataset.key] = r.get(); });
         kpi[y] = Object.fromEntries(kpiInputs.map(([k, inp]) => [k, Number(inp.value)]));
-        const ex = extra.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [name, qty] = l.split(';'); return { name: name.trim(), qty: Number(qty) || 1 }; });
-        await KKS.saveSetting('signatories', s); await KKS.saveSetting('kpi_targets', kpi); await KKS.saveSetting('p3k_extra_items', ex);
+        await KKS.saveSetting('signatories', s); await KKS.saveSetting('kpi_targets', kpi);
         toast('Pengaturan tersimpan.', 'success');
       } catch (e) { toast(e.message, 'error'); }
     };

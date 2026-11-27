@@ -188,7 +188,7 @@
   // ======================= P3K =======================
   KKS.register({ id: 'p3k', title: 'Kotak P3K', domain: 'K3', icon: '🩹', perm: 'P3K', order: 13, render: KCRUD.page({
     id: 'p3k', title: 'Kotak P3K', table: 'p3k_boxes', perm: 'P3K', domain: 'K3', itemName: 'kotak P3K', order: ['code', true], rowLabel: r => r.code,
-    intro: 'Standar Permenakertrans No. PER.15/MEN/VIII/2008, Kotak Type A (20 item). Item tambahan (mis. obat) bisa diatur di Pengaturan.',
+    intro: 'Daftar kotak P3K per lokasi. Isi & jumlah standar tiap kotak (termasuk obat tambahan) diatur di menu "Isi standar kotak P3K".',
     fields: [
       { k: 'code', l: 'Kode kotak', req: true, list: true, ph: 'P3K 01' }, { k: 'location', l: 'Lokasi', req: true, list: true, span: 2 },
       { k: 'type', l: 'Tipe', t: 'select', opts: ['A', 'B', 'C'], def: 'A', list: true }, { k: 'brand', l: 'Merk/model', list: true },
@@ -197,16 +197,64 @@
     print: { title: 'LOKASI KOTAK P3K', sig: 'K3' }
   }) });
 
+  // --- Isi standar kotak P3K (per lokasi): jumlah bisa disesuaikan, obat/item tambahan bisa ditambah ---
+  const P3K_CAT = { Standar: '', Obat: 'info', Tambahan: 'warn' };
+  KKS.register({ id: 'p3k-isi', title: 'Isi standar kotak P3K', domain: 'K3', icon: '💊', perm: 'P3K', order: 13.5, render: KCRUD.page({
+    id: 'p3k-isi', title: 'Isi standar kotak P3K', table: 'p3k_items', perm: 'P3K', domain: 'K3', itemName: 'isi kotak P3K', order: ['sort', true, 'name', true],
+    createLabel: 'Tambah obat / item', rowLabel: r => r.name,
+    intro: 'Daftar isi yang dipakai di Checklist P3K bulanan untuk lokasi ini. Awalnya 20 item standar PER.15/MEN/VIII/2008 (Kotak Type A). Ubah "Jumlah standar" sesuai yang dibeli, tambahkan obat atau item lain, atau nonaktifkan item yang tidak dipakai. Centang "Pantau kedaluwarsa" agar checklist menanyakan tanggal kedaluwarsanya.',
+    filters: { status: { label: 'Kategori', k: 'category', opts: ['Standar', 'Obat', 'Tambahan'] } },
+    presets: () => ({ category: 'Obat', track_expiry: true, sort: 50 }),
+    rowClass: r => r.active ? '' : 'row-warn',
+    fields: [
+      { k: 'sort', l: 'No. urut', t: 'number', def: 50, list: true, help: 'Urutan di form checklist' },
+      { k: 'name', l: 'Nama isi / obat', req: true, list: true, span: 2, cls: 'wrap', ph: 'mis. Betadine 30 ml, Paracetamol 500 mg' },
+      { k: 'category', l: 'Kategori', t: 'select', opts: ['Standar', 'Obat', 'Tambahan'], def: 'Obat', list: true, render: r => KUI.badge(r.category, P3K_CAT[r.category]) },
+      { k: 'std_qty', l: 'Jumlah standar per kotak', t: 'number', min: 0, req: true, def: 1, list: true, help: 'Sesuaikan dengan jumlah yang dibeli / ditetapkan' },
+      { k: 'uom', l: 'Satuan', t: 'list', opts: ['buah', 'botol', 'bungkus', 'gulung', 'lembar', 'pasang', 'strip', 'tablet', 'tube', 'sachet', 'pcs'], list: true },
+      { k: 'track_expiry', l: 'Pantau kedaluwarsa', t: 'bool', boolLabel: 'Ya, tanyakan tanggal kedaluwarsa saat checklist', list: true },
+      { k: 'active', l: 'Dipakai', t: 'bool', def: true, boolLabel: 'Aktif di checklist', list: true, render: r => r.active ? KUI.badge('Aktif', 'ok') : KUI.badge('Nonaktif') },
+      { k: 'note', l: 'Keterangan', t: 'textarea', list: true, cls: 'wrap' }
+    ],
+    headerActions: [{ label: '⧉ Salin daftar dari lokasi lain', perm: 'C', run: async ({ reload }) => {
+      if (state.unit === 'ALL') return toast('Pilih lokasi tujuan dulu.', 'warning');
+      const opts = state.units.filter(u => u.id !== state.unit);
+      const sel = h('select', { class: 'k-input' }, opts.map(u => h('option', { value: u.id }, u.short_name)));
+      const go = h('button', { class: 'k-btn k-btn-primary' }, 'Salin');
+      const m = modal({ title: 'Salin isi standar P3K', body: h('div', {}, h('p', { class: 'k-help' }, `Item yang belum ada di ${unitShort(state.unit)} akan ditambahkan, dan jumlah standar item yang sudah ada disamakan.`), h('label', { class: 'k-field' }, h('span', {}, 'Dari lokasi'), sel)),
+        footer: [h('button', { class: 'k-btn', onclick: () => m.close() }, 'Batal'), go] });
+      go.onclick = async () => {
+        try {
+          const src = check(await sb.from('p3k_items').select('*').eq('unit_id', sel.value));
+          const rows = src.map(r => ({ unit_id: state.unit, sort: r.sort, name: r.name, std_qty: r.std_qty, uom: r.uom, category: r.category, track_expiry: r.track_expiry, active: r.active, note: r.note }));
+          check(await sb.from('p3k_items').upsert(rows, { onConflict: 'unit_id,name' }));
+          toast(`${rows.length} item disalin.`, 'success'); m.close(); reload();
+        } catch (e) { toast(e.message, 'error'); }
+      };
+    } }],
+    print: { title: 'DAFTAR ISI STANDAR KOTAK P3K', sig: 'K3', fields: ['sort', 'name', 'category', 'std_qty', 'uom', 'note'] }
+  }) });
+
+  /** Isi kotak P3K aktif untuk lokasi (dari tabel p3k_items; cadangan: 20 item standar bawaan). */
+  async function p3kItems(unit) {
+    const rows = check(await sb.from('p3k_items').select('*').eq('unit_id', unit).eq('active', true).order('sort').order('name'));
+    if (rows.length) return rows.map((r, i) => ({ id: r.id, no: i + 1, name: r.name, qty: Number(r.std_qty), uom: r.uom || '', cat: r.category, exp: r.track_expiry }));
+    return KREF.P3K_ITEMS.map(([no, name, qty]) => ({ id: 'std-' + no, no, name, qty, uom: '', cat: 'Standar', exp: false }));
+  }
+  /** Baris checklist lama dicocokkan per id item, lalu per nama. */
+  const lineFor = (ex, it) => { const ls = (ex && ex.lines) || []; return ls.find(l => l.iid === it.id) || ls.find(l => String(l.name).toLowerCase() === it.name.toLowerCase()) || null; };
+  const expState = (d) => { if (!d) return null; const n = daysUntil(d); return n < 0 ? 'bad' : n <= 60 ? 'warn' : 'ok'; };
+
   async function p3kCheckPage(c, params, actions) {
     if (KMOD.needUnit(c)) return;
     let per = params.period || thisPeriod();
-    const extra = KKS.setting('p3k_extra_items', []);
-    const items = KREF.P3K_ITEMS.map(([no, name, qty]) => ({ no, name, qty })).concat(extra.map((x, i) => ({ no: 21 + i, name: x.name, qty: x.qty, extra: true })));
+    let items = await p3kItems(state.unit);
     const box = h('div');
-    c.append(h('div', { class: 'k-intro' }, 'Centang (✓) jika tersedia & isi jumlah yang ada. Item kurang dari standar masuk daftar kebutuhan refill.'),
+    c.append(h('div', { class: 'k-intro' }, 'Centang (✓) jika tersedia & isi jumlah yang ada. Item kurang dari standar atau obat kedaluwarsa masuk daftar kebutuhan refill. Isi & jumlah standar diatur di menu ', h('a', { href: '#/p3k-isi' }, 'Isi standar kotak P3K'), '.'),
       h('div', { class: 'k-toolbar' }, KMOD.periodPicker(per, (v) => { per = v; load(); })), box);
-    actions.append(h('button', { class: 'k-btn', onclick: () => printForm() }, 'Cetak Form Checklist'));
+    actions.append(h('button', { class: 'k-btn', onclick: () => KKS.go('p3k-isi') }, '💊 Atur isi & obat'), h('button', { class: 'k-btn', onclick: () => printNeeds() }, 'Kebutuhan refill'), h('button', { class: 'k-btn', onclick: () => printForm() }, 'Cetak Form Checklist'));
     let boxes = [], checks = [];
+    const hasExp = () => items.some(it => it.exp);
     async function load() {
       box.innerHTML = '<div class="k-empty">Memuat…</div>';
       boxes = check(await sb.from('p3k_boxes').select('*').eq('unit_id', state.unit).eq('active', true).order('code'));
@@ -223,13 +271,16 @@
       function show(b) {
         pane.innerHTML = '';
         const ex = checks.find(x => x.box_id === b.id);
-        const lines = Object.fromEntries(((ex && ex.lines) || []).map(l => [l.no, l]));
         const tb = h('tbody');
         items.forEach(it => {
-          const l = lines[it.no] || { available: false, qty: null, note: '' };
-          tb.append(h('tr', { 'data-no': it.no }, h('td', { class: 'c' }, it.no), h('td', {}, it.name, it.extra ? ' (tambahan)' : ''), h('td', { class: 'c' }, it.qty),
+          const l = lineFor(ex, it) || { available: false, qty: null, note: '', exp: '' };
+          const expInp = it.exp ? h('input', { type: 'date', class: 'k-input', 'data-f': 'exp', value: l.exp || '', onchange: (e) => { const s = expState(e.target.value); e.target.style.borderColor = s === 'bad' ? '#ef4444' : s === 'warn' ? '#f97316' : ''; } }) : h('span', { class: 'k-help' }, '—');
+          if (it.exp && l.exp) { const s = expState(l.exp); if (s !== 'ok') expInp.style.borderColor = s === 'bad' ? '#ef4444' : '#f97316'; }
+          tb.append(h('tr', { 'data-id': it.id }, h('td', { class: 'c' }, it.no), h('td', {}, it.name, it.cat !== 'Standar' ? h('small', { class: 'k-help' }, ` (${it.cat.toLowerCase()})`) : null),
+            h('td', { class: 'c' }, `${fmtNum(it.qty)} ${it.uom}`),
             h('td', { class: 'c' }, h('input', { type: 'checkbox', 'data-f': 'available', checked: l.available || null })),
             h('td', { class: 'c' }, h('input', { type: 'number', min: 0, class: 'k-input', 'data-f': 'qty', value: l.qty ?? '' })),
+            ...(hasExp() ? [h('td', { class: 'c' }, expInp)] : []),
             h('td', {}, h('input', { class: 'k-input', 'data-f': 'note', value: l.note || '' }))));
         });
         const date = h('input', { type: 'date', class: 'k-input', value: ex ? ex.date : (per === thisPeriod() ? today() : per + '-01') });
@@ -237,39 +288,65 @@
         const note = h('input', { class: 'k-input', value: ex ? ex.note || '' : '' });
         const save = h('button', { class: 'k-btn k-btn-primary', disabled: !can('P3K', ex ? 'U' : 'C') || null }, 'Simpan checklist');
         const evBox = h('div');
+        const cols = ['No', 'Isi', 'Jumlah standar', 'Tersedia (✓)', 'Jumlah ada', ...(hasExp() ? ['Kedaluwarsa'] : []), 'Keterangan'];
         pane.append(h('div', { class: 'k-form', style: { marginBottom: '10px' } }, h('label', { class: 'k-field' }, h('span', {}, 'Hari/tanggal pemeriksaan'), date), h('label', { class: 'k-field' }, h('span', {}, 'Diperiksa oleh'), by), h('label', { class: 'k-field' }, h('span', {}, 'Catatan'), note)),
-          h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix k-mcard' }, h('thead', {}, h('tr', {}, ['No', 'Isi', 'Jumlah standar', 'Tersedia (✓)', 'Jumlah ada', 'Keterangan'].map(x => h('th', {}, x)))), tb)),
-          h('div', { class: 'k-toolbar', style: { marginTop: '10px' } }, h('button', { class: 'k-btn', onclick: () => tb.querySelectorAll('tr').forEach(tr => { const it = items.find(x => x.no == tr.dataset.no); tr.querySelector('[data-f=available]').checked = true; const q = tr.querySelector('[data-f=qty]'); if (q.value === '') q.value = it.qty; }) }, 'Tandai semua lengkap'), save),
+          h('div', { class: 'k-table-wrap' }, h('table', { class: 'k-matrix k-mcard' }, h('thead', {}, h('tr', {}, cols.map(x => h('th', {}, x)))), tb)),
+          h('div', { class: 'k-toolbar', style: { marginTop: '10px' } }, h('button', { class: 'k-btn', onclick: () => tb.querySelectorAll('tr').forEach(tr => { const it = items.find(x => x.id === tr.dataset.id); tr.querySelector('[data-f=available]').checked = true; const q = tr.querySelector('[data-f=qty]'); if (q.value === '') q.value = it.qty; }) }, 'Tandai semua lengkap'), save),
           h('div', { class: 'k-form-section' }, 'Foto kotak P3K'), evBox);
         if (ex) KEVID.widget(evBox, { unit: b.unit_id, domain: 'K3', module: 'P3K', entity: 'p3k_checks', entityId: ex.id, period: per });
         else evBox.append(h('p', { class: 'k-help' }, 'Simpan checklist dulu untuk menambah foto.'));
         save.onclick = async () => {
           if (date.value.slice(0, 7) !== per) return toast(`Tanggal harus di bulan ${periodLabel(per)}.`, 'error');
-          const ls = Array.from(tb.querySelectorAll('tr')).map(tr => ({ no: Number(tr.dataset.no), name: items.find(x => x.no == tr.dataset.no).name, std: items.find(x => x.no == tr.dataset.no).qty,
-            available: tr.querySelector('[data-f=available]').checked, qty: tr.querySelector('[data-f=qty]').value === '' ? null : Number(tr.querySelector('[data-f=qty]').value), note: tr.querySelector('[data-f=note]').value }));
-          const complete = ls.filter(l => l.available && (l.qty === null || l.qty >= l.std)).length;
+          const ls = Array.from(tb.querySelectorAll('tr')).map(tr => {
+            const it = items.find(x => x.id === tr.dataset.id); const e = tr.querySelector('[data-f=exp]');
+            return { no: it.no, iid: it.id, name: it.name, std: it.qty, uom: it.uom, cat: it.cat,
+              available: tr.querySelector('[data-f=available]').checked, qty: tr.querySelector('[data-f=qty]').value === '' ? null : Number(tr.querySelector('[data-f=qty]').value),
+              exp: e && e.value ? e.value : null, note: tr.querySelector('[data-f=note]').value };
+          });
+          const complete = ls.filter(l => l.available && (l.qty === null || l.qty >= l.std) && !(l.exp && daysUntil(l.exp) < 0)).length;
           try {
             save.disabled = true;
             const row = { unit_id: b.unit_id, box_id: b.id, period: per, date: date.value, lines: ls, complete_count: complete, total_count: ls.length, checked_by: by.value, note: note.value };
             check(await sb.from('p3k_checks').upsert(row, { onConflict: 'box_id,period' }));
-            toast(`Checklist ${b.code} tersimpan (${complete}/${ls.length} lengkap).`, 'success'); load();
+            const expd = ls.filter(l => l.exp && daysUntil(l.exp) < 0).length;
+            toast(`Checklist ${b.code} tersimpan (${complete}/${ls.length} lengkap${expd ? `, ${expd} kedaluwarsa` : ''}).`, expd ? 'warning' : 'success'); load();
           } catch (e) { toast(e.message, 'error'); save.disabled = false; }
         };
       }
       show(boxes[0]);
     }
     function printForm() {
-      const byBox = Object.fromEntries(checks.map(x => [x.box_id, Object.fromEntries((x.lines || []).map(l => [l.no, l]))]));
       const headRows = [h('tr', {}, h('th', { rowspan: 2 }, 'No'), h('th', { rowspan: 2 }, 'Isi Kotak P3K'), h('th', { rowspan: 2 }, 'Jumlah'), boxes.map(b => h('th', {}, b.location))),
         h('tr', {}, boxes.map(b => h('th', {}, fmtDate((checks.find(x => x.box_id === b.id) || {}).date) || '-')))];
-      const body = h('table', { class: 'p-table small' }, h('thead', {}, headRows), h('tbody', {}, items.map(it => h('tr', {}, h('td', { class: 'num' }, it.no), h('td', {}, it.name), h('td', { class: 'center' }, it.qty),
-        boxes.map(b => { const l = (byBox[b.id] || {})[it.no]; return h('td', { class: 'center' }, l ? (l.available ? '√' + (l.qty !== null && l.qty < it.qty ? ` (${l.qty})` : '') : 'X') : ''); })))));
+      const body = h('table', { class: 'p-table small' }, h('thead', {}, headRows), h('tbody', {}, items.map(it => h('tr', {}, h('td', { class: 'num' }, it.no), h('td', {}, it.name + (it.cat !== 'Standar' ? ` (${it.cat.toLowerCase()})` : '')), h('td', { class: 'center' }, `${fmtNum(it.qty)} ${it.uom}`),
+        boxes.map(b => { const l = lineFor(checks.find(x => x.box_id === b.id), it); return h('td', { class: 'center' }, l ? (l.available ? '√' + (l.qty !== null && l.qty < it.qty ? ` (${l.qty})` : '') + (l.exp ? ` exp ${fmtDate(l.exp)}` : '') : 'X') : ''); })))));
       KPRINT.doc({ title: 'FORM CHECKLIST BULANAN ISI KOTAK P3K TYPE A', period: periodLabel(per), landscape: boxes.length > 5, sig: 'K3',
-        body: [body, h('p', {}, 'Beri tanda (√) jika tersedia dan (X) jika tidak. Angka dalam kurung = jumlah ada bila kurang dari standar.')] });
+        body: [body, h('p', {}, 'Beri tanda (√) jika tersedia dan (X) jika tidak. Angka dalam kurung = jumlah ada bila kurang dari standar; exp = tanggal kedaluwarsa obat.')] });
+    }
+    /** Rekap kebutuhan refill: kekurangan jumlah, item tidak ada, & obat kedaluwarsa/≤60 hari per kotak. */
+    function printNeeds() {
+      const rows = [];
+      boxes.forEach(b => {
+        const ex = checks.find(x => x.box_id === b.id);
+        items.forEach(it => {
+          const l = lineFor(ex, it);
+          if (!l) return;
+          const need = !l.available ? it.qty : (l.qty !== null && l.qty < it.qty ? it.qty - l.qty : 0);
+          const ed = l.exp ? daysUntil(l.exp) : null;
+          if (need > 0 || (ed !== null && ed <= 60)) rows.push({ box: `${b.code} · ${b.location}`, name: it.name, std: it.qty, have: l.available ? (l.qty ?? it.qty) : 0, need: need || (ed !== null && ed < 0 ? it.qty : 0), uom: it.uom, ket: ed === null ? '' : ed < 0 ? `Kedaluwarsa ${fmtDate(l.exp)} — ganti` : `Kedaluwarsa ${fmtDate(l.exp)} (${ed} hari lagi)` });
+        });
+      });
+      if (!checks.length) return toast('Belum ada checklist pada bulan ini.', 'warning');
+      const tot = {}; rows.forEach(r => { tot[r.name] = tot[r.name] || { need: 0, uom: r.uom }; tot[r.name].need += r.need; });
+      KPRINT.doc({ title: 'KEBUTUHAN REFILL KOTAK P3K', period: periodLabel(per), sig: 'K3',
+        body: [rows.length ? KPRINT.tableNode([{ l: 'Kotak', v: r => r.box }, { l: 'Isi / obat', v: r => r.name }, { l: 'Standar', v: r => `${fmtNum(r.std)} ${r.uom}`, cls: 'center' }, { l: 'Ada', v: r => fmtNum(r.have), cls: 'center' }, { l: 'Kebutuhan', v: r => fmtNum(r.need), cls: 'center' }, { l: 'Keterangan', v: r => r.ket }], rows) : h('p', {}, 'Semua kotak lengkap — tidak ada kebutuhan refill.'),
+          rows.length ? h('h4', {}, 'Total kebutuhan pembelian') : null,
+          rows.length ? KPRINT.tableNode([{ l: 'Isi / obat', v: r => r[0] }, { l: 'Jumlah', v: r => `${fmtNum(r[1].need)} ${r[1].uom}`, cls: 'center' }], Object.entries(tot).filter(([, v]) => v.need > 0)) : null] });
     }
     load();
   }
   KKS.register({ id: 'p3k-cek', title: 'Checklist P3K bulanan', domain: 'K3', icon: '📋', perm: 'P3K', order: 14, render: p3kCheckPage });
+
 
   // ======================= SAFETY PATROL =======================
   const patrolDef = {
